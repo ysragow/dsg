@@ -1,0 +1,37 @@
+Classes
+
+- Predicate
+    - Numerical
+    - Categorical
+- Nodes
+    - Branch
+    - Leaf
+- Query
+- Query Clauses
+- Data Tuples
+- Data Point
+
+
+
+Functions
+
+- Predicate
+    - Check if query intersects predicate
+    - Check if data point in predicate
+- Nodes
+    - Branch
+        - Insert data point into child
+    - Leaf
+        - Insert data point\
+- Query
+    - Loop over every leaf node
+
+
+
+Algorithms
+
+- QD Tree construction
+    - Greedy
+        - Make a decision tree, basically
+    - RL
+        - WOODLBLOCK
