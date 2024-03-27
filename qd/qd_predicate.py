@@ -1,31 +1,25 @@
-operations = [
-    lambda a, b: a > b,
-    lambda a, b: a < b,
-    lambda a, b: a >= b,
-    lambda a, b: a <= b,
-    lambda a, b: a == b,
-    lambda a, b: any([a[i] & b[i] for i in range(len(a))]),
-]
+operations = {
+    '>': lambda a, b: a > b,
+    '<': lambda a, b: a < b,
+    '>=': lambda a, b: a >= b,
+    '<=': lambda a, b: a <= b,
+    '=': lambda a, b: a == b,
+    'IN': lambda a, b: any([(i in b) for i in a]),
+}
 
 
 class Operator:
     """
         General Operator Class
-        - code: the operator code representing the operator
-        Operator Codes:
-        - 1: >
-        - 2: <
-        - 3: >=
-        - 4: <=
-        - 5: = (numerical)
-        - 6: IN
+        - code: the string representing the operator
+        Operators: >, <, >=, <=, = (numerical), IN
     """
-    def __init__(self, code):
-        self.num = code
-        self.func = operations[code - 1]
+    def __init__(self, symbol):
+        self.symbol = symbol
+        self.func = operations[symbol]
 
     def __eq__(self, other):
-        return self.num == other.num
+        return self.symbol == other.symbol
 
     def __call__(self, a, b):
         """
@@ -41,32 +35,19 @@ class Predicate:
     General Predicate Class
     - op: operation the predicate is on
     - column: the column upon which this predicate acts
-    - values: list of boolean values (for categorical only)
-    - value: singular comparative value (for numerical only)
+
+    This skeleton class will never be called.  It does not intersect any other predicate.
     """
-    values = []
-    num = 0
-    col2 = None
 
     def __init__(self, op, column):
         self.op = op
         self.column = column
+        assert (op.symbol == 'IN') == column.numerical, "This operation cannot be used on this column"
 
-    def check_set(self, values):
-        return False
-
-    def check_num(self, num, op):
-        return False
-
-    def intersect(self, pred):
+    def intersect(self, preds):
         """
-        :param pred: the predicate with which to judge intersection
+        :param preds: a dictionary mapping column names to predicates
         :return: bool: whether the predicates intersect
         """
-        if self.column != pred.column:
-            return False
-        elif self.op == 6:
-            return self.check_set(pred.values)
-        else:
-            return self.check_num(pred.num, pred.op)
+        return False
 

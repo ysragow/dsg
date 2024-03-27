@@ -32,3 +32,64 @@
             if self.num < num:
                 return True
         return False
+
+
+# numerical predicates intersection function
+    def intersect(self, preds):
+        """
+        :param preds: a list of predicates, where each relevant column has a top pred and bottom pred
+        :return: whether these predicates intersect with the comparative predicate
+        """
+        output = True
+        pred1_bot = None
+        pred1_bot_not_found = True
+        pred1_top = None
+        pred1_top_not_found = True
+        pred2_bot = None
+        pred2_bot_not_found = True
+        pred2_top = None
+        pred2_top_not_found = True
+        for pred in preds:
+            if pred.column == self.column:
+                if pred.op.symbol in (">", ">="):
+                    assert pred1_bot_not_found, "Duplicate bottom predicates for column " + pred.column.name
+                    pred1_bot = pred
+                    pred1_bot_not_found = False
+                elif pred.op.symbol in ("<", "<="):
+                    assert pred1_top_not_found, "Duplicate top predicates for column " + pred.column.name
+                    pred1_top = pred
+                    pred1_top_not_found = False
+                else:
+                    raise Exception("Illegal predicate")
+            if pred.column == self.col2:
+                if pred.op.symbol in (">", ">="):
+                    assert pred2_bot_not_found, "Duplicate bottom predicates for column " + pred.column.name
+                    pred2_bot = pred
+                    pred2_bot_not_found = False
+                elif pred.op.symbol in ("<", "<="):
+                    assert pred2_top_not_found, "Duplicate top predicates for column " + pred.column.name
+                    pred2_top = pred
+                    pred2_top_not_found = False
+                else:
+                    raise Exception("Illegal predicate")
+        preds = [pred1_bot, pred1_top, pred2_bot, pred2_top]
+        assert len(preds) == 4, "For a comparative predicate, preds should have length 4"
+        assert preds[0].column == preds[1].column == self.column, "The first two predicates should match column 1"
+        assert preds[2].column == preds[3].column == self.col2, "The last two predicates should match column 2"
+        assert preds[0].op.symbol in ('>', '>='), "The first predicate should be > or >="
+        assert preds[1].op.symbol in ('<', '<='), "The second predicate should be < or <="
+        assert preds[2].op.symbol in ('>', '>='), "The third predicate should be > or >="
+        assert preds[3].op.symbol in ('<', '<='), "The final predicate should be < or <="
+        plist = preds if self.op.symbol in ('<','<=') else [preds[1], preds[0], preds[3], preds[2]]
+        ops = [self.op]
+        if self.op.symbol == '=':
+            # = can be defined as <= and >=
+            ops = [Operator('<='), Operator('>=')]
+        for i in range(len(ops)):
+            p1 = plist[i]
+            p2 = plist[-i-1]
+            # Either one is strictly greater than the other, or they are equal and all operations allow equality
+            output &= (self.op(p1.num, p2.num) and (p1.num != p2.num)) \
+                      or\
+                      all((self.op(p1.num, p2.num), p1.op(p1.num, p2.num), p2.op(p1.num, p2.num)))
+        return output

@@ -35,3 +35,10 @@ Algorithms
         - Make a decision tree, basically
     - RL
         - WOODLBLOCK
+
+Ensure that a query only accesses necessary columns
+- file formats: parquet, ORC
+- or you can just use a csv cuz this is python anyway
+
+Think about ways to make splitting the data on partitions faster (find papers on this)
+- Papers: Autoadmin (UMSR) 2000s, read the partitioning one
