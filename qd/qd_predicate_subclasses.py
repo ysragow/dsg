@@ -1,4 +1,6 @@
 from qd_predicate import Predicate, Operator
+from qd_column import Column
+from qd_table import Table
 import json
 
 
@@ -15,6 +17,9 @@ class Categorical(Predicate):
         assert (not column.numerical), "This column cannot be used for a categorical predicate"
         assert op.symbol == 'IN', "Wrong type of predicate"
 
+    def __contains__(self, item):
+        return item[self.column.num] in self.values
+
     def intersect(self, preds):
         """
         :param preds: a dictionary mapping column names to predicates
@@ -24,6 +29,21 @@ class Categorical(Predicate):
         for pred in preds[self.column.name]:
             output &= self.op(self.values, pred.values)
         return output
+
+    def flip(self, parent_pred=None):
+        """
+        :param parent_pred: the parent predicate
+        :return: predicate: the inverse of this predicate
+        """
+        assert parent_pred is not None, "This predicate requires a parent predicate"
+        assert parent_pred.column == self.column, "Parent predicate column does not match"
+        for item in self.values:
+            assert item in parent_pred.values, "This predicate is not a subset of the parent predicate"
+        output = set()
+        for item in parent_pred.values:
+            if item not in self.values:
+                output.add(item)
+        return Categorical(self.op, self.column, output)
 
 
 class Numerical(Predicate):
@@ -39,6 +59,13 @@ class Numerical(Predicate):
         assert column.numerical, "This column cannot be used for a numerical predicate"
         assert op.symbol != 'IN', "Wrong type of predicate"
 
+    def __contains__(self, item):
+        """
+        :param item: an item to be tested against this parameter
+        :return: whether this item is in this predicate
+        """
+        return self.op(item[self.column.num], self.num)
+
     def intersect(self, preds):
         """
         :param preds: a dictionary mapping columns to predicates
@@ -51,6 +78,13 @@ class Numerical(Predicate):
             output &= self.op(num, self.num) or op(self.num, num) or ((self.op == op) & (self.num == num))
         return output
 
+    def flip(self, parent_pred=None):
+        """
+        :param parent_pred: extraneous argument, here for inheritance reasons
+        :return: predicate: the inverse of this predicate
+        """
+        return Numerical(self.op.flip(), self.column, self.num)
+
 
 class CatComparative(Predicate):
     # A comparative predicate between two columns.  Only used in queries, never in nodes
@@ -61,10 +95,18 @@ class CatComparative(Predicate):
         :param col2: the column this predicate breaks on
         """
         super().__init__(op, col1)
+        self.comparative = True
         self.col2 = col2
         assert col1.numerical == col2.numerical, "These columns cannot be compared"
         assert (op.symbol == '='), "Categorical comparison requires equality statement"
         assert (not col1.numerical), "These columns are not categorical"
+
+    def __contains__(self, item):
+        """
+        :param item: an item to be tested against this parameter
+        :return: whether this item is in this predicate
+        """
+        return item[self.column.num] == item[self.col2.num]
 
     def intersect(self, preds):
         """
@@ -89,9 +131,17 @@ class NumComparative(Predicate):
         """
         super().__init__(op, col1)
         self.col2 = col2
+        self.comparative = True
         assert col1.numerical == col2.numerical, "These columns cannot be compared"
         assert col1.numerical, "Wrong type of comparative predicate"
         assert op.symbol != "IN", "This operation cannot be used to compare columns"
+
+    def __contains__(self, item):
+        """
+        :param item: an item to be tested against this parameter
+        :return: whether this item is in this predicate
+        """
+        return self.op(item[self.column.num], item[self.col2.num])
 
     def intersect(self, preds):
         """
@@ -120,8 +170,10 @@ def pred_gen(pred_string, table):
     :param table: an instance of the table class
     :return: a predicate based on the string
     """
+    # print(pred_string)
     col_name, op_name, value_name = pred_string.split(" ")
     column = table.get_column(col_name)
+    assert column is not None, "The column " + col_name + " does not exist in this table."
     op = Operator(op_name)
     if table.get_column(value_name):
         # Instance of a comparative predicate
@@ -130,12 +182,15 @@ def pred_gen(pred_string, table):
             return NumComparative(op, column, column2)
         else:
             return CatComparative(op, column, column2)
-    elif value_name.replace('.', '', 1).isdigit():
+    elif value_name.replace('.', '', 1).isdigit() or (value_name[1:].replace('.', '', 1).isdigit() and value_name[0] == '-'):
         # Instance of a numerical predicate
         num = int(value_name) if value_name.isdigit() else float(value_name)
         assert column.numerical, "This is not a numerical column, so it cannot be compared with a number"
         return Numerical(op, column, num)
     elif (value_name[0] == '(') and (value_name[-1] == ')'):
         values = set(json.loads(value_name.replace("'", '"').replace('(', '[').replace(')', ']')))
+        # this is not finished!
+    else:
+        raise Exception("Something's wrong")
 
 

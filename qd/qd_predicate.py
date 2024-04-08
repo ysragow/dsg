@@ -7,6 +7,13 @@ operations = {
     'IN': lambda a, b: any([(i in b) for i in a]),
 }
 
+operations_opposites = {
+    '>': '<=',
+    '<': '>=',
+    '>=': '<',
+    '<=': '>',
+}
+
 
 class Operator:
     """
@@ -29,6 +36,14 @@ class Operator:
         """
         return self.func(a, b)
 
+    def flip(self):
+        """
+        :return: the opposite operation, or itself if this does not apply
+        """
+        if self.symbol in operations_opposites:
+            return Operator(operations_opposites[self.symbol])
+        return self
+
 
 class Predicate:
     """
@@ -42,7 +57,15 @@ class Predicate:
     def __init__(self, op, column):
         self.op = op
         self.column = column
-        assert (op.symbol == 'IN') == column.numerical, "This operation cannot be used on this column"
+        self.comparative = False
+        assert (op.symbol == 'IN') != column.numerical, "This operation cannot be used on this column"
+
+    def __contains__(self, item):
+        """
+        :param item: an item to be tested against this parameter
+        :return: whether this item is in this predicate
+        """
+        return False
 
     def intersect(self, preds):
         """
@@ -50,4 +73,10 @@ class Predicate:
         :return: bool: whether the predicates intersect
         """
         return False
+
+    def flip(self):
+        """
+        :return: predicate: the inverse of this predicate
+        """
+        return None
 
