@@ -29,7 +29,7 @@ class Table:
         return self.columns.get(column, None)
 
     def list_columns(self):
-        return self.columns.keys()
+        return self.column_list.copy()
 
     def split(self, pred):
         file = open('data/' + self.name + '.csv', 'r')
@@ -78,6 +78,7 @@ class Table:
                     categorical[col.num] = {row_1[col.num]}
                     numerical[col.num] = False
             for row in data:
+                size += 1
                 for i in range(len(row)):
                     if numerical[i]:
                         maxes[i] = max(row[i], maxes[i])

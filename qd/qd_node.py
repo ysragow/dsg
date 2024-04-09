@@ -24,10 +24,11 @@ class Node:
         Otherwise, it should be None
         """
         self.table = table
+        self.name = self.table.name
         self.leaf = True
         self.root = root
-        self.child1 = None
-        self.child2 = None
+        self.child_right = None
+        self.child_left = None
         self.preds = preds
         if not (root or split_pred):
             raise Exception("If this is not the root, a splitting predicate is required")
@@ -61,8 +62,8 @@ class Node:
                 assert 'values' in dir(col_preds[0]), "Predicate for this column must be categorical"
                 assert len(col_preds[0].values) > 0, "Impossible constraint on column " + col.name
         if recurse and self.is_split:
-            self.child1.check_inv(recurse=True)
-            self.child2.check_inv(recurse=True)
+            self.child_right.check_inv(recurse=True)
+            self.child_left.check_inv(recurse=True)
 
     # Intersection Checkers
     def intersect_t(self, query):
@@ -137,8 +138,8 @@ class Node:
                 preds1[col] = self.preds[col]
                 preds2[col] = self.preds[col]
         table1, table2 = self.table.split(pred)
-        self.child1 = Node(table1, preds1, split_pred=pred)
-        self.child2 = Node(table2, preds2, split_pred=pred_alt)
+        self.child_right = Node(table1, preds1, split_pred=pred)
+        self.child_left = Node(table2, preds2, split_pred=pred_alt)
         self.is_split = True
 
 
@@ -158,10 +159,15 @@ class Root(Node):
         super().__init__(table, preds, root=True)
         self.leaves = {self.table.name: self}
 
-    def split_leaf(self, leaf_name, pred):
-        assert leaf_name in self.leaves, "This is not a leaf node"
-        leaf = self.leaves[leaf_name]
+    def split_leaf(self, leaf, pred):
+        """
+        :param leaf: a leaf node of this root
+        :param pred: a predicate
+        :return: the right and left children of this leaf
+        """
+        assert leaf.name in self.leaves, "This is not a leaf node"
         leaf.split(pred)
-        self.leaves[leaf.child1.name] = leaf.child1
-        self.leaves[leaf.child2.name] = leaf.child2
-        del self.leaves[leaf_name]
+        self.leaves[leaf.child_right.name] = leaf.child_right
+        self.leaves[leaf.child_left.name] = leaf.child_left
+        del self.leaves[leaf.name]
+        return leaf.child_right, leaf.child_left

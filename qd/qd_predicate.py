@@ -28,6 +28,12 @@ class Operator:
     def __eq__(self, other):
         return self.symbol == other.symbol
 
+    def __str__(self):
+        return self.symbol
+
+    def __repr__(self):
+        return self.symbol
+
     def __call__(self, a, b):
         """
         :param a: first object acted on
@@ -58,6 +64,7 @@ class Predicate:
         self.op = op
         self.column = column
         self.comparative = False
+        self.str_right = ''
         assert (op.symbol == 'IN') != column.numerical, "This operation cannot be used on this column"
 
     def __contains__(self, item):
@@ -79,4 +86,10 @@ class Predicate:
         :return: predicate: the inverse of this predicate
         """
         return None
+
+    def __str__(self):
+        return str(self.column) + ' ' + str(self.op) + ' ' + self.str_right
+
+    def __repr__(self):
+        return str(self)
 

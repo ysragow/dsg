@@ -14,6 +14,7 @@ class Categorical(Predicate):
         """
         super().__init__(op, column)
         self.values = categories
+        self.str_right = str(categories)
         assert (not column.numerical), "This column cannot be used for a categorical predicate"
         assert op.symbol == 'IN', "Wrong type of predicate"
 
@@ -55,6 +56,7 @@ class Numerical(Predicate):
         :param num: the number that we measure against the column value
         """
         super().__init__(op, column)
+        self.str_right = str(num)
         self.num = num
         assert column.numerical, "This column cannot be used for a numerical predicate"
         assert op.symbol != 'IN', "Wrong type of predicate"
@@ -95,6 +97,7 @@ class CatComparative(Predicate):
         :param col2: the column this predicate breaks on
         """
         super().__init__(op, col1)
+        self.str_right = str(col2)
         self.comparative = True
         self.col2 = col2
         assert col1.numerical == col2.numerical, "These columns cannot be compared"
@@ -130,6 +133,7 @@ class NumComparative(Predicate):
         :param col2: the column this predicate breaks on
         """
         super().__init__(op, col1)
+        self.str_right = str(col2)
         self.col2 = col2
         self.comparative = True
         assert col1.numerical == col2.numerical, "These columns cannot be compared"

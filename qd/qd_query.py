@@ -28,6 +28,12 @@ class Query:
                 output.append(pred)
         return output
 
+    def __str__(self):
+        return str(self.list_preds())\
+
+    def __repr__(self):
+        return str(self)
+
 
 class Workload:
     # contains a list of queries
@@ -39,6 +45,12 @@ class Workload:
 
     def __len__(self):
         return len(self.queries)
+
+    def __str__(self):
+        return str(self.queries)
+
+    def __repr__(self):
+        return str(self)
 
     def split(self, pred):
         """
@@ -62,6 +74,8 @@ class Workload:
                 left_true = True
             if right_true & left_true:
                 straddlers.append(query)
+            if not (right_true or left_true):
+                raise Exception("Something is wrong with predicate check")
         return Workload(right_queries), Workload(left_queries), Workload(straddlers)
 
 
