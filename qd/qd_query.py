@@ -1,5 +1,5 @@
-from qd_predicate_subclasses import Predicate, Operator, Numerical, Categorical, CatComparative, NumComparative, pred_gen
-from qd_table import Table
+from qd.qd_predicate_subclasses import Predicate, Operator, Numerical, Categorical, CatComparative, NumComparative, pred_gen
+from qd.qd_table import Table
 
 
 class Query:
@@ -28,8 +28,18 @@ class Query:
                 output.append(pred)
         return output
 
+    def __contains__(self, item):
+        """
+        :param item: a row of data
+        :return: whether every predicate of the query contains this item
+        """
+        output = True
+        for pred in self.list_preds():
+            output &= item in pred
+        return output
+
     def __str__(self):
-        return str(self.list_preds())\
+        return str(self.list_preds())
 
     def __repr__(self):
         return str(self)

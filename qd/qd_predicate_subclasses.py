@@ -1,6 +1,6 @@
-from qd_predicate import Predicate, Operator
-from qd_column import Column
-from qd_table import Table
+from qd.qd_predicate import Predicate, Operator
+from qd.qd_column import Column
+from qd.qd_table import Table
 import json
 
 
@@ -51,7 +51,7 @@ class Numerical(Predicate):
     # A numerical predicate, using <, >, =>, <=, or =
     def __init__(self, op, column, num):
         """
-        :param op: the operation this predicate is based upon.  must be in 1-4
+        :param op: the operator this predicate is based upon
         :param column: the column this predicate breaks on
         :param num: the number that we measure against the column value
         """
@@ -67,6 +67,12 @@ class Numerical(Predicate):
         :return: whether this item is in this predicate
         """
         return self.op(item[self.column.num], self.num)
+
+    def to_dnf(self):
+        """
+        :return: this predicate as a DNF expression
+        """
+        return self.column.name, self.op.symbol, self.num
 
     def intersect(self, preds):
         """
@@ -92,7 +98,7 @@ class CatComparative(Predicate):
     # A comparative predicate between two columns.  Only used in queries, never in nodes
     def __init__(self, op, col1, col2):
         """
-        :param op: the code for the operation this predicate is based upon.  must be 5 or less
+        :param op: the operator this predicate is based upon
         :param col1: the column this predicate breaks on
         :param col2: the column this predicate breaks on
         """

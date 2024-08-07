@@ -1,7 +1,11 @@
-from qd_predicate import Predicate, Operator
-from qd_predicate_subclasses import Numerical, Categorical
-from qd_query import Query
-from qd_table import Table
+import csv
+
+from qd.qd_predicate import Predicate, Operator
+from qd.qd_predicate_subclasses import Numerical, Categorical, pred_gen
+from qd.qd_query import Query
+from qd.qd_table import Table
+import pickle
+import os
 
 
 class Node:
@@ -101,14 +105,14 @@ class Node:
         Split the node into two children
         :param pred: the predicate upon which the node is split
         """
-        assert not self.leaf, "This function should not be called on the root node"
-        assert not pred.comparative, "A node cannot split on a comparative predicate"
+        # assert not self.leaf, "This function should not be called on the root node"
+        # assert not pred.comparative, "A node cannot split on a comparative predicate"
         assert not self.is_split, "This node has already been split"
         old_preds = self.preds[pred.column.name]
         preds1 = {}
         preds2 = {}
         pred_alt = pred.flip(old_preds[0])
-        for col in self.table.column_list():
+        for col in self.table.list_columns():
             if col == pred.column.name:
                 # For the relevant column, change one predicate
                 if pred.column.numerical:
@@ -138,6 +142,9 @@ class Node:
                 preds1[col] = self.preds[col]
                 preds2[col] = self.preds[col]
         table1, table2 = self.table.split(pred)
+        if not self.root:
+            self.table.delete()
+        self.split_pred = pred
         self.child_right = Node(table1, preds1, split_pred=pred)
         self.child_left = Node(table2, preds2, split_pred=pred_alt)
         self.is_split = True
@@ -146,18 +153,33 @@ class Node:
 class Root(Node):
     """
     Root node class
+
+    Notes on tree json formulation:
+    - The root is represented as a list containing:
+        - First, the list of starting predicates
+        - Then, child0
+        - Then, child1
+        - Then, a dictionary mapping leaf node names to a list of their predicates
+    - Each node (aside from the root) is represented as a list containing:
+        - First, the predicate differentiating that node from its parent
+        - Then, child0 (if it exists)
+        - Then, child1 (if it exists)
     """
     def __init__(self, table):
-        categorical, mins, maxes = table.get_boundaries()
-        preds = {}
-        for name in table.list_columns():
-            col = table.get_column(name)
-            if col.numerical:
-                preds[name] = (Numerical(Operator('>='), col, mins[col.num]), Numerical(Operator('<='), col, maxes[col.num]))
-            else:
-                preds[name] = (Categorical(Operator('IN'), col, categorical[col.num]),)
-        super().__init__(table, preds, root=True)
-        self.leaves = {self.table.name: self}
+        if os.path.isfile('data/' + table.name + '.pickle'):
+            raise Exception("A tree for this file exists.")
+        else:
+            # This tree has not been created yet, so we make a new one
+            categorical, mins, maxes = table.get_boundaries()
+            preds = {}
+            for name in table.list_columns():
+                col = table.get_column(name)
+                if col.numerical:
+                    preds[name] = (Numerical(Operator('>='), col, mins[col.num]), Numerical(Operator('<='), col, maxes[col.num]))
+                else:
+                    preds[name] = (Categorical(Operator('IN'), col, categorical[col.num]),)
+            super().__init__(table, preds, root=True)
+            self.leaves = {self.table.name: self}
 
     def split_leaf(self, leaf, pred):
         """
@@ -171,3 +193,60 @@ class Root(Node):
         self.leaves[leaf.child_left.name] = leaf.child_left
         del self.leaves[leaf.name]
         return leaf.child_right, leaf.child_left
+
+    def get_data(self, query, use_tree=True, count_invalid_data=False, count_partitions=False, verbosity=0):
+        """
+        :param query: a query object
+        :param use_tree: whether to use the tree structure, or to just take straight from one table
+        :param count_invalid_data: whether to keep track of and return the number of invalid data points
+        :param count_partitions: whether to count how many partitions each query saw
+        :param verbosity: how much detail to print
+        :return: if count_partitions:
+                    returns the data, followed by the invalid count, followed by the partition count
+                 elif count_invalid_data:
+                    returns the data as a list, followed by the invalid data count.
+                 else:
+                    just returns the data.
+        """
+        bad_data_count = 0
+        leaf_count = 0
+        output = []
+        if use_tree:
+            for leaf_name in self.leaves.keys():
+                if verbosity == 1:
+                    print("Reading {}".format(leaf_name), end="\r")
+                leaf = self.leaves[leaf_name]
+                if leaf.intersect_t(query):
+                    leaf_count += 1
+                    with open('data/' + leaf.table.name + '.csv') as file:
+                        data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
+                        data.__next__()
+                        data_count = 0
+                        for row in data:
+                            if verbosity == 2:
+                                print("Reading tuple {} of {}".format(data_count,leaf_name), end="\r")
+                            data_count += 1
+                            if row in query:
+                                output.append(row)
+                            elif count_invalid_data:
+                                bad_data_count += 1
+        else:
+            with open('data/' + self.table.name + '.csv') as file:
+                data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
+                data.__next__()
+                leaf_count = 1
+                for row in data:
+                    if row in query:
+                        output.append(row)
+                    elif count_invalid_data:
+                        bad_data_count += 1
+        if count_partitions:
+            return output, bad_data_count, leaf_count
+        if count_invalid_data:
+            return output, bad_data_count
+        return output
+
+    def delete(self):
+        for leaf in self.leaves.keys():
+            self.leaves[leaf].table.delete()
+        self.table.delete()

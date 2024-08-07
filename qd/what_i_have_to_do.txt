@@ -42,3 +42,71 @@ Ensure that a query only accesses necessary columns
 
 Think about ways to make splitting the data on partitions faster (find papers on this)
 - Papers: Autoadmin (UMSR) 2000s, read the partitioning one
+
+Look at Sam's class!  Watch some lecture videos
+
+How to make a workload
+- Uniformly randomly generate predicates on one column
+- Generate a workload with average selectivity (what percent of the data actually satisfies the predicate) of 2 percent
+
+access token: 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
+
+Code to Make
+- Workload class
+- Tree class
+- Qd-tree generate algorithm (greedy) based on dataset and workload
+- Algorithm to split dataset based on Qd-Tree
+- Algorithm to generate randomly distributed dataset with 10 columns (each column integer between 0 and 10k) with 1M datapoints
+- Algorithm to generate low-selectivity workload based on dataset (each one has a range of values on the dataset)
+- Measure the cost of partitioning with vs without a Qd-tree by seeing for each query in a workload what percent of data scanned actually fits the query
+
+- Instead of randomly sampling columns to predicate on, choose some subset
+- Write up math stuff for Sam
+- Do the recursive math expected value thing
+- Think about the ranking function to use
+
+- Get rid of assumption 3
+- Pick a partitioning scheme from papers sent
+- Try and find assumptions about workload and data distributions that make QD trees perform well
+
+- Read other partitioning schemes, such as:
+    - single-column sort
+    - multi-column sort
+    - space-filling curves (z-order curves),
+    - flood
+    - tsunami
+
+- Look into Zipf/Zipfian distribution
+
+- Watch the videos for Index Trees I and Index Trees II
+- Send Siva detailed writeup of example where Z-Order performs better than QD-Tree
+- Come up with an actual workload where QD-Tree performs better than Z-Order
+
+- Write up the intuition about Z-Order versus QD-tree and send to Siva on Thursday night (about how Z-Order's performance is not very correlated with the data distribution, and far more with the workload distribution)
+- Come up with a function for measuring the performance of a QD-Tree on a dataset/workload (maybe based on previous work?) (call it small q)
+- Come up with a function for measuring the performance of Z-Ordering on a dataset/workload (call it small z)
+
+- Continue trying to think about small q (think about centrality)
+- Think about whether to move on from small q
+- Keep block size in mind
+
+- Important doc: https://docs.google.com/document/d/1fJGGzS1y_tXhKwKdOzGKnK5TcaktgzZg8bB23rnpkS8/edit 
+- Try and understand papers 3 and 4 (Wednesday), and answer questions on all of the papers
+	- Read about Parquet as necessary
+		- Figure out what parameters you can actually tune about Parquet
+	- Skim through (actually just skim) ORC as necessary
+- Try and understand Nimble (primarily for question 10)
+- Continue thinking about approximation algorithms
+
+- Get a better understanding of smallest zone maps
+- Get a better understanding of why Parquet and ORC may be better than Nimble for queries looking for more columns
+- Make a presentation about Parquet, Nimble, and ORC and where each one has advantages (have by Monday)
+	- Make it all bullet points, don't worry about figures
+- Think about an example where taking advantage of parallelism (on the file level) gives a performance advantage (by Wednesday)
+
+- More in depth analysis of related work
+- Run example as an experiment (use parquet and low column count)
+	- Learn ow to use Python multiprocessing 
+- Proposed Work
+	- For proposed work, star with clear definition of problem statement 
+	- Merge file formats section into partitioning schemes section 

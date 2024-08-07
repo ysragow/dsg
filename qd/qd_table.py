@@ -1,6 +1,7 @@
-from qd_column import Column
-from qd_predicate import Predicate
+from qd.qd_column import Column
+from qd.qd_predicate import Predicate
 import csv
+import os
 
 
 class Table:
@@ -8,19 +9,35 @@ class Table:
     Represents a table in a database
     IMMUTABLE
     """
-    def __init__(self, tname):
+    def __init__(self, tname, size=None, columns=None):
         """
         :param tname: name of the table.  does not include .csv
         """
         self.name = tname
         self.columns = {}
+        if columns is not None:
+            self.column_list = columns
+            self.size = 0
+            for i in range(len(columns)):
+                self.columns[columns[i]] = Column(columns[i], i, 'REAL')
+            return
         with open('data/' + tname + '.csv', 'r') as file:
             data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
             columns = data.__next__()
+            if size is None:
+                size = 0
+                for _ in data:
+                    size += 1
+            self.size = size
+
         # assume for now that all data is floats!
         self.column_list = columns
         for i in range(len(columns)):
             self.columns[columns[i]] = Column(columns[i], i, 'REAL')
+
+    def delete(self):
+        os.remove('data/' + self.name + '.csv')
+        # print('deleting ' + self.name)
 
     def info(self):
         return str(self.columns)
@@ -29,6 +46,9 @@ class Table:
         return self.columns.get(column, None)
 
     def list_columns(self):
+        """
+        :return: a list containing the name of every column, in order
+        """
         return self.column_list.copy()
 
     def split(self, pred):
@@ -41,15 +61,19 @@ class Table:
         data.__next__()
         data_0.writerow(self.column_list)
         data_1.writerow(self.column_list)
+        data_0_size = 0
+        data_1_size = 0
         for row in data:
             if row in pred:
                 data_0.writerow(row)
+                data_0_size += 1
             else:
                 data_1.writerow(row)
+                data_1_size += 1
         file.close()
         file_0.close()
         file_1.close()
-        return Table(self.name + '0'), Table(self.name + '1')
+        return Table(self.name + '0', data_0_size), Table(self.name + '1', data_1_size)
 
     def get_boundaries(self):
         """

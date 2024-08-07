@@ -40,7 +40,10 @@ class Operator:
         :param b: second object acted on
         :return: whether the operator on a and b is true or not
         """
-        return self.func(a, b)
+        try:
+            return self.func(a, b)
+        except TypeError:
+            raise Exception("Cannot compare: " + str(a) + " " + self.symbol + " " + str(b))
 
     def flip(self):
         """
@@ -66,6 +69,12 @@ class Predicate:
         self.comparative = False
         self.str_right = ''
         assert (op.symbol == 'IN') != column.numerical, "This operation cannot be used on this column"
+
+    def to_dnf(self):
+        """
+        :return: this predicate as a DNF expression
+        """
+        return self.column.name, self.op.symbol, self.str_right
 
     def __contains__(self, item):
         """
