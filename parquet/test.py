@@ -6,9 +6,9 @@ s = 700
 if __name__ == '__main__':
     name = 'test'
     print("Generating data...")
-    # generate_two_column(100000000, name, 900)
+    generate_two_column(100000000, name, 90)
     print("Done")
-    query = generate_query(1/2, 99999999, 0)
+    query = generate_query(1/10, 99999999, 0)
     print(query)
     files = get_matching_files(query, name)
     print(files)
