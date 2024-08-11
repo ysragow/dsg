@@ -210,6 +210,8 @@ def regular_read(filters, files, scan=False, timestamps=False):
         output.append(table.shape[0] if scan else table)
     output = sum(output) if scan else table_concat(output)[0]
     if timestamps:
+        end_time = time()
         print("Size: ", output if scan else output.shape)
-        print("Total Time: ", time() - start_time)
+        print("Total Time: ", end_time - start_time)
+        return end_time - start_time
     return output
