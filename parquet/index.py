@@ -31,7 +31,7 @@ def index(folder, query_bottom, query_top):
 
     end_time = time()
     total_time = end_time - start_time
-    print('Indexing Time: ', total_time)
+    print("With {} partitions, found {} matching files in {} seconds".format(len(starts), len(output), total_time))
     with open(folder + '/index_time', 'w') as file:
         file.write(str(total_time))
 

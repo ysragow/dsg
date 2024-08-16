@@ -3,7 +3,7 @@ from warnings import filterwarnings
 from os import path, mkdir
 from parquet import generate_two_column
 from params import size as p_size, partitions as p_partitions, name as p_name
-
+from time import time
 from json import dump
 
 filterwarnings('ignore')
@@ -21,8 +21,10 @@ def generate(name, size, partitions):
     base = name + '/0.parquet'
     if not path.exists(base):
         print("Generating initial data...")
+        start_time = time()
         generate_two_column(size, name, 1)
-        print("Done")
+        end_time = time()
+        print("Done in {} seconds".format(end_time - start_time))
 
     # Find the file size (NOTE: WILL NOT NECESSARILY HAVE ACCURATE NUMBER OF PARTITIONS)
     file_size = -((-size) // partitions)
@@ -34,14 +36,16 @@ def generate(name, size, partitions):
 
     # Loop through the data, reading and writing chunks as you go
     print("Writing data with {} partitions...".format(partitions))
+    start_time = time()
     while start < size:
         file_path = '{}/{}.parquet'.format(folder, start)
         filters = [('A', '>=', start), ('A', '<', stop)]
         pq.write_table(pq.read_table(base, filters=filters), file_path)
+        starts.append(start)
         start += file_size
         stop += file_size
-        starts.append(start)
-    print("Done")
+    end_time = time()
+    print("Done in {} seconds".format(end_time - start_time))
 
     # Save the indices as a json
     with open(folder + '/index.json', 'w') as file:
