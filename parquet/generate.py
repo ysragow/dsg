@@ -33,6 +33,7 @@ def generate(name, size, partitions):
     starts = []
 
     # Loop through the data, reading and writing chunks as you go
+    print("Writing data with {} partitions...".format(partitions))
     while start < size:
         file_path = '{}/{}.parquet'.format(folder, start)
         filters = [('A', '>=', start), ('A', '<', stop)]
@@ -40,6 +41,7 @@ def generate(name, size, partitions):
         start += file_size
         stop += file_size
         starts.append(start)
+    print("Done")
 
     # Save the indices as a json
     with open(folder + '/index.json', 'w') as file:
