@@ -5,13 +5,28 @@ from parquet import generate_two_column
 from params import size as p_size, partitions as p_partitions, name as p_name
 from time import time
 from json import dump
+from index import index
+from parallel import regular_read
+from multiprocessing import Pool
 
 filterwarnings('ignore')
 
+read_processes = 4
+write_processes = 4
 
-def generate(name, size, partitions):
+
+def read_write(arg):
+    query, sources, out_file = arg
+    data = regular_read(query, sources)
+    pq.write_table(data, out_file)
+
+
+def generate(name, size, partitions, source=None):
     # Generate the folder if it doesn't exist
     folder = '{}/{}'.format(name, partitions)
+    source_folder = name
+    if source:
+        source_folder = '{}/{}'.format(name, source)
     if not path.exists(name):
         mkdir(name)
     if not path.exists(folder):
@@ -37,13 +52,21 @@ def generate(name, size, partitions):
     # Loop through the data, reading and writing chunks as you go
     print("Writing data with {} partitions...".format(partitions))
     start_time = time()
+    process_tuples = []
     while start < size:
         file_path = '{}/{}.parquet'.format(folder, start)
         filters = [('A', '>=', start), ('A', '<', stop)]
-        pq.write_table(pq.read_table(base, filters=filters), file_path)
+        if source:
+            files = index(source_folder, start, stop)
+            process_tuples.append((filters, files, file_path))
+        else:
+            pq.write_table(pq.read_table(base, filters=filters), file_path)
         starts.append(start)
         start += file_size
         stop += file_size
+    if source:
+        with Pool(write_processes) as p:
+            p.map(read_write, process_tuples)
     end_time = time()
     print("Done in {} seconds".format(end_time - start_time))
 
@@ -53,5 +76,10 @@ def generate(name, size, partitions):
 
 
 if __name__ == '__main__':
-    for partition_count in p_partitions:
-        generate(p_name, p_size, partition_count)
+    for i in range(len(p_partitions)):
+        partition_count = p_partitions[i]
+        if i > 0:
+            prev_count = p_partitions[i-1]
+            generate(p_name, p_size, partition_count, source=prev_count)
+        else:
+            generate(p_name, p_size, partition_count)

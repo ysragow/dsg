@@ -3,12 +3,12 @@ from time import time
 from json import load, dump
 
 
-def index(folder, query_bottom, query_top):
+def index(folder, query_bottom, query_top, timestamps=False):
     start_time = time()
 
     # Binary search for smallest start less than or equal to bottom
-    with open(folder + '/index.json', 'r') as file:
-        starts = load(file)
+    with open(folder + '/index.json', 'r') as file1:
+        starts = load(file1)
     search_top = len(starts) - 1
     search_bottom = 0
     while search_top - search_bottom > 1:
@@ -24,16 +24,17 @@ def index(folder, query_bottom, query_top):
     while starts[i] < query_top:
         output.append('{}/{}.parquet'.format(folder, starts[i]))
         i += 1
+        if i == len(starts):
+            break
 
-    # Save that list as a json
-    with open(folder + '/files.json', 'w') as file:
-        dump(output, file)
+    if timestamps:
+        end_time = time()
+        total_time = end_time - start_time
+        print("With {} partitions, found {} matching files in {} seconds".format(len(starts), len(output), total_time))
+        with open(folder + '/index_time', 'w') as file1:
+            file1.write(str(total_time))
 
-    end_time = time()
-    total_time = end_time - start_time
-    print("With {} partitions, found {} matching files in {} seconds".format(len(starts), len(output), total_time))
-    with open(folder + '/index_time', 'w') as file:
-        file.write(str(total_time))
+    return output
 
 
 if __name__ == '__main__':
@@ -41,7 +42,9 @@ if __name__ == '__main__':
     q_top = query[1][2]
     for partition_count in partitions:
         f = '{}/{}'.format(name, partition_count)
-        index(f, q_bottom, q_top)
+        files = index(f, q_bottom, q_top, timestamps=True)
+        with open(f + '/files.json', 'w') as file:
+            dump(files, file)
 
 
 
