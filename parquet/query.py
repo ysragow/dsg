@@ -16,6 +16,7 @@ if __name__ == '__main__':
         parallel_times_dict = {}
         pooled_times_dict = {}
         for process_count in processes:
+            print("Partitions: {}   Processes: {}".format(partition_count, process_count))
             pa_time = parallel_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
             parallel_times_dict[process_count] = pa_time
             po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps)

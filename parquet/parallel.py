@@ -123,6 +123,7 @@ def parallel_read(filters, files, processes, scan=False, timestamps=False, verbo
     if timestamps:
         print('\n')
         # print("Querying Time: ", end_query - start_time)
+        print("Parallel Read")
         print("Processes: ", processes)
         print("Size: ", output if scan else output.shape)
         print("Total Time: ", end_concat - start_time)
@@ -186,6 +187,7 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False):
     if timestamps:
         print('\n')
         # print("Querying Time: ", end_query - start_time)
+        print("Pooled Read")
         print("Processes: ", processes)
         print("Size: ", output if scan else output.shape)
         print("Total Time: ", end_concat - start_time)
@@ -211,6 +213,7 @@ def regular_read(filters, files, scan=False, timestamps=False):
     output = sum(output) if scan else table_concat(output)[0]
     if timestamps:
         end_time = time()
+        print("Regular Read")
         print("Size: ", output if scan else output.shape)
         print("Total Time: ", end_time - start_time)
         return end_time - start_time
