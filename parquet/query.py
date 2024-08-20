@@ -61,4 +61,4 @@ if __name__ == '__main__':
     overall_dict = {'regular': regular_dict, 'pooled': pooled_dict, 'parallel': parallel_dict}
     with open(name + '/query_times.json', 'w') as file:
         dump(overall_dict, file)
-    bandwidth('data')
+    bandwidth(name)
