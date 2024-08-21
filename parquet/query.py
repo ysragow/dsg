@@ -33,7 +33,7 @@ def bandwidth(direc):
                 total_size += getsize(pfile)
             sizes[method][part] = total_size
     output = remap(d1, lambda k1, v1: remap(v1, lambda k2, v2: remap(v2, lambda _, t: sizes[k1][k2] / t)))
-    with open(direc + '/bandwidth.json', 'w') as f:
+    with open('{}/{}bandwidth.json', 'w'.format(direc, direc)) as f:
         dump(output, f)
 
 
