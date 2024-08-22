@@ -3,6 +3,7 @@ from params import name, partitions, verbosity, timestamps, processes, query
 from parallel import parallel_read, pooled_read, regular_read
 from json import load, dump
 from os.path import getsize
+from sys import argv
 
 filterwarnings('ignore')
 
@@ -38,7 +39,18 @@ def bandwidth(direc):
 
 
 if __name__ == '__main__':
-
+    verbosity = False
+    offset = 0
+    for i in range(len(argv)):
+        if (i == 1) and (argv[1][0] == '-'):
+            if 'v' in argv[1]:
+                verbosity = True
+            if 'n' in argv[1]:
+                name = argv[2]
+                offset += 1
+            if 's' in argv[1]:
+                query[0] = (query[0][0], query[0][1], int(argv[2 + offset]))
+                query[1] = (query[1][0], query[1][1], int(argv[3 + offset]))
     parallel_dict = {}
     pooled_dict = {}
     regular_dict = {}
@@ -49,14 +61,15 @@ if __name__ == '__main__':
         parallel_times_dict = {}
         pooled_times_dict = {}
         for process_count in processes:
-            print("Partitions: {}   Processes: {}".format(partition_count, process_count))
+            if verbosity:
+                print("Partitions: {}   Processes: {}".format(partition_count, process_count))
             pa_time = parallel_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
             parallel_times_dict[process_count] = pa_time
-            po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps)
+            po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
             pooled_times_dict[process_count] = po_time
         parallel_dict[partition_count] = parallel_times_dict
         pooled_dict[partition_count] = pooled_times_dict
-        re_time = regular_read(query, files, scan=True, timestamps=timestamps)
+        re_time = regular_read(query, files, scan=True, timestamps=timestamps, verbose=verbosity)
         regular_dict[partition_count] = re_time
     overall_dict = {'regular': regular_dict, 'pooled': pooled_dict, 'parallel': parallel_dict}
     with open(name + '/query_times.json', 'w') as file:

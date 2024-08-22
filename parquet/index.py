@@ -1,6 +1,7 @@
 from params import query, name, partitions
 from time import time
 from json import load, dump
+from sys import argv
 
 
 def index(folder, query_bottom, query_top, timestamps=False):
@@ -40,6 +41,18 @@ def index(folder, query_bottom, query_top, timestamps=False):
 if __name__ == '__main__':
     q_bottom = query[0][2]
     q_top = query[1][2]
+
+    # Process args
+    if len(argv) == 2:
+        name = argv[1]
+    elif len(argv) == 3:
+        q_bottom = int(argv[1])
+        q_top = int(argv[2])
+    elif len(argv) == 4:
+        name = argv[1]
+        q_bottom = int(argv[2])
+        q_top = int(argv[3])
+    # Index
     for partition_count in partitions:
         f = '{}/{}'.format(name, partition_count)
         files = index(f, q_bottom, q_top, timestamps=True)

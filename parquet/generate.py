@@ -8,6 +8,7 @@ from json import dump
 from index import index
 from parallel import regular_read
 from multiprocessing import Pool
+from sys import argv
 
 filterwarnings('ignore')
 
@@ -73,6 +74,17 @@ def generate(name, size, partitions, source=None):
 
 
 if __name__ == '__main__':
+    # Process arguments
+    if len(argv) == 3:
+        p_name = argv[1]
+        p_size = int(argv[2])
+    elif len(argv) == 2:
+        if argv[0].isdigit():
+            p_size = int(argv[2])
+        else:
+            p_name = argv[1]
+
+    # Generate files
     for i in range(len(p_partitions)):
         partition_count = p_partitions[i]
         if i > 0:
