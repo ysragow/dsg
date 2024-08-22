@@ -15,8 +15,9 @@ filterwarnings('ignore')
 
 def read_write(arg):
     query, sources, out_file = arg
+    bound = query[1][2] - query[0][2]
     data = regular_read(query, sources)
-    pq.write_table(data, out_file)
+    pq.write_table(data, out_file, row_group_size=(bound+1))
 
 
 def generate(name, size, partitions, source=None):
