@@ -121,13 +121,14 @@ def parallel_read(filters, files, processes, scan=False, timestamps=False, verbo
     end_query = time()
     end_concat = time()
     if timestamps:
-        print('\n')
-        # print("Querying Time: ", end_query - start_time)
-        print("Parallel Read")
-        print("Processes: ", processes)
-        print("Size: ", output if scan else output.shape)
-        print("Total Time: ", end_concat - start_time)
-        print('\n')
+        if verbose:
+            print('\n')
+            # print("Querying Time: ", end_query - start_time)
+            print("Parallel Read")
+            print("Processes: ", processes)
+            print("Size: ", output if scan else output.shape)
+            print("Total Time: ", end_concat - start_time)
+            print('\n')
         return end_concat - start_time
     return output
 
@@ -166,7 +167,7 @@ def print_all(q):
             print(q.get())
 
 
-def pooled_read(filters, files, processes, scan=False, timestamps=False):
+def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose=False):
     """
     Reads multiple files in parallel
     :param filters: A list of filters
@@ -185,18 +186,18 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False):
     output = sum(output) if scan else table_concat(output)[0]
     end_concat = time()
     if timestamps:
-        print('\n')
-        # print("Querying Time: ", end_query - start_time)
-        print("Pooled Read")
-        print("Processes: ", processes)
-        print("Size: ", output if scan else output.shape)
-        print("Total Time: ", end_concat - start_time)
-        print('\n')
+        if verbose:
+            print('\n')
+            print("Pooled Read")
+            print("Processes: ", processes)
+            print("Size: ", output if scan else output.shape)
+            print("Total Time: ", end_concat - start_time)
+            print('\n')
         return end_concat - start_time
     return output
 
 
-def regular_read(filters, files, scan=False, timestamps=False):
+def regular_read(filters, files, scan=False, timestamps=False, verbose=False):
     """
     Sequentially read every provided file
     :param filters: A list of filters
@@ -213,8 +214,9 @@ def regular_read(filters, files, scan=False, timestamps=False):
     output = sum(output) if scan else table_concat(output)[0]
     if timestamps:
         end_time = time()
-        print("Regular Read")
-        print("Size: ", output if scan else output.shape)
-        print("Total Time: ", end_time - start_time)
+        if verbose:
+            print("Regular Read")
+            print("Size: ", output if scan else output.shape)
+            print("Total Time: ", end_time - start_time)
         return end_time - start_time
     return output
