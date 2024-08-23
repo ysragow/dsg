@@ -2,7 +2,7 @@ import pyarrow.parquet as pq
 from warnings import filterwarnings
 from os import path, mkdir
 from parquet import generate_two_column
-from params import size as p_size, partitions as p_partitions, name as p_name, write_processes
+from params import size as p_size, partitions as p_partitions, name as p_name, write_processes, row_groups
 from time import time
 from json import dump
 from index import index
@@ -17,7 +17,16 @@ def read_write(arg):
     query, sources, out_file = arg
     bound = query[1][2] - query[0][2]
     data = regular_read(query, sources)
-    pq.write_table(data, out_file, row_group_size=(bound+1))
+    if (row_groups is None) or (row_groups == 'none'):
+        pq.write_table(data, out_file, row_group_size=(bound+1))
+    elif row_groups == 'default':
+        pq.write_table(data, out_file)
+    elif row_groups == 'optimize':
+        pass
+    elif str(row_groups).isdigit():
+        pq.write_table(data, out_file, row_group_size=int(row_groups))
+    else:
+        raise Exception("params.row_groups must be None, 'none', 'default', 'optimize', or an integer")
 
 
 def generate(name, size, partitions, source=None):

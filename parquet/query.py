@@ -1,5 +1,5 @@
 from warnings import filterwarnings
-from params import name, partitions, verbosity, timestamps, processes, query
+from params import name, partitions, verbosity, timestamps, processes, query, query_types
 from parallel import parallel_read, pooled_read, regular_read
 from json import load, dump
 from os.path import getsize
@@ -21,9 +21,10 @@ def bandwidth(direc):
     with open(direc + '/query_times.json', 'r') as f:
         d1 = load(f)
     sizes = {}
-    reg_data = d1['regular']
-    del d1['regular']
-    for method in ('parallel', 'pooled'):
+    if 'regular' in query_types:
+        reg_data = d1['regular']
+        del d1['regular']
+    for method in d1.keys():
         method_data = d1[method]
         sizes[method] = {}
         for part in method_data.keys():
@@ -63,15 +64,25 @@ if __name__ == '__main__':
         for process_count in processes:
             if verbosity:
                 print("Partitions: {}   Processes: {}".format(partition_count, process_count))
-            pa_time = parallel_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
-            parallel_times_dict[process_count] = pa_time
-            po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
-            pooled_times_dict[process_count] = po_time
+            if 'parallel' in query_types:
+                pa_time = parallel_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
+                parallel_times_dict[process_count] = pa_time
+            if 'pooled' in query_types:
+                po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
+                pooled_times_dict[process_count] = po_time
         parallel_dict[partition_count] = parallel_times_dict
         pooled_dict[partition_count] = pooled_times_dict
-        re_time = regular_read(query, files, scan=True, timestamps=timestamps, verbose=verbosity)
-        regular_dict[partition_count] = re_time
-    overall_dict = {'regular': regular_dict, 'pooled': pooled_dict, 'parallel': parallel_dict}
+        if 'regular' in query_types:
+            re_time = regular_read(query, files, scan=True, timestamps=timestamps, verbose=verbosity)
+            regular_dict[partition_count] = re_time
+    overall_dict = {}
+    if 'regular' in query_types:
+        overall_dict['regular'] = regular_dict
+    if 'parallel' in query_types:
+        overall_dict['parallel'] = parallel_dict
+    if 'pooled' in query_types:
+        overall_dict['pooled'] = pooled_dict
+    # overall_dict = {'regular': regular_dict, 'pooled': pooled_dict, 'parallel': parallel_dict}
     with open(name + '/query_times.json', 'w') as file:
         dump(overall_dict, file)
     bandwidth(name)
