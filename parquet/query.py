@@ -1,5 +1,5 @@
 from warnings import filterwarnings
-from params import name, partitions, verbosity, timestamps, processes, query, query_types
+from params import name, partitions, verbosity_2, timestamps, processes, query, query_types
 from parallel import parallel_read, pooled_read, regular_read
 from json import load, dump
 from os.path import getsize
@@ -65,15 +65,15 @@ if __name__ == '__main__':
             if verbosity:
                 print("Partitions: {}   Processes: {}".format(partition_count, process_count))
             if 'parallel' in query_types:
-                pa_time = parallel_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
+                pa_time = parallel_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity_2)
                 parallel_times_dict[process_count] = pa_time
             if 'pooled' in query_types:
-                po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
+                po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity_2)
                 pooled_times_dict[process_count] = po_time
         parallel_dict[partition_count] = parallel_times_dict
         pooled_dict[partition_count] = pooled_times_dict
         if 'regular' in query_types:
-            re_time = regular_read(query, files, scan=True, timestamps=timestamps, verbose=verbosity)
+            re_time = regular_read(query, files, scan=True, timestamps=timestamps, verbose=verbosity_2)
             regular_dict[partition_count] = re_time
     overall_dict = {}
     if 'regular' in query_types:
