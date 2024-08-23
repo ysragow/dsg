@@ -61,19 +61,19 @@ if __name__ == '__main__':
             files = load(file)
         parallel_times_dict = {}
         pooled_times_dict = {}
+        if verbosity:
+            print("Partitions: {}".format(partition_count))
         for process_count in processes:
-            if verbosity:
-                print("Partitions: {}   Processes: {}".format(partition_count, process_count))
             if 'parallel' in query_types:
-                pa_time = parallel_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity_2)
+                pa_time = parallel_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
                 parallel_times_dict[process_count] = pa_time
             if 'pooled' in query_types:
-                po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity_2)
+                po_time = pooled_read(query, files, process_count, scan=True, timestamps=timestamps, verbose=verbosity)
                 pooled_times_dict[process_count] = po_time
         parallel_dict[partition_count] = parallel_times_dict
         pooled_dict[partition_count] = pooled_times_dict
         if 'regular' in query_types:
-            re_time = regular_read(query, files, scan=True, timestamps=timestamps, verbose=verbosity_2)
+            re_time = regular_read(query, files, scan=True, timestamps=timestamps, verbose=verbosity)
             regular_dict[partition_count] = re_time
     overall_dict = {}
     if 'regular' in query_types:

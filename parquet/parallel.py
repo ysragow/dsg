@@ -67,7 +67,7 @@ def filter_queue(files, filters, q, q2=None, scan=False):
         q.put(output.shape[0] if scan else output)
 
 
-def parallel_read(filters, files, processes, scan=False, timestamps=False, verbose=False):
+def parallel_read(filters, files, processes, scan=False, timestamps=False, verbose=False, verbose2=False):
     """
     Reads multiple files in parallel
     :param filters: A list of filters
@@ -76,15 +76,16 @@ def parallel_read(filters, files, processes, scan=False, timestamps=False, verbo
     :param scan: Whether to scan instead of reading
     :param timestamps: whether to return the total elapsed time
     :param verbose: whether to print things
+    :param verbose2: whether to print even more things
     :return: A pyarrow table containing the contents of every file
     """
     start_time = time()
     q = Queue()
     q2 = None
-    if verbose:
+    if verbose2:
         q2 = Queue()
     lists = [[filters, file] for file in files]
-    if verbose:
+    if verbose2:
         print("Generating processes...")
     active_processes = {}
     tables = []
@@ -121,7 +122,7 @@ def parallel_read(filters, files, processes, scan=False, timestamps=False, verbo
     end_query = time()
     end_concat = time()
     if timestamps:
-        if verbose:
+        if verbose2:
             print('\n')
             # print("Querying Time: ", end_query - start_time)
             print("Parallel Read")
@@ -129,6 +130,8 @@ def parallel_read(filters, files, processes, scan=False, timestamps=False, verbo
             print("Size: ", output if scan else output.shape)
             print("Total Time: ", end_concat - start_time)
             print('\n')
+        elif verbose and scan:
+            print('Parallel Read with {} processes scanned {} rows in {} seconds'.format(processes, output, end_concat - start_time))
         return end_concat - start_time
     return output
 
@@ -167,7 +170,7 @@ def print_all(q):
             print(q.get())
 
 
-def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose=False):
+def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose=False, verbose2=False):
     """
     Reads multiple files in parallel
     :param filters: A list of filters
@@ -186,13 +189,15 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
     output = sum(output) if scan else table_concat(output)[0]
     end_concat = time()
     if timestamps:
-        if verbose:
+        if verbose2:
             print('\n')
             print("Pooled Read")
             print("Processes: ", processes)
             print("Size: ", output if scan else output.shape)
             print("Total Time: ", end_concat - start_time)
             print('\n')
+        elif verbose and scan:
+            print('Pooled Read with {} processes scanned {} rows in {} seconds'.format(processes, output, end_concat - start_time))
         return end_concat - start_time
     return output
 
