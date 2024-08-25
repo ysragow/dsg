@@ -1,4 +1,4 @@
-from params import query, name, partitions
+from params import queries, name, partitions
 from time import time
 from json import load, dump
 from sys import argv
@@ -38,26 +38,39 @@ def index(folder, query_bottom, query_top, timestamps=False):
     return output
 
 
-if __name__ == '__main__':
-    q_bottom = query[0][2]
-    q_top = query[1][2]
+def main():
+    all_files = []
+    local_name = name
+    for query in queries:
+        q_files = {}
+        q_bottom = query[0][2]
+        q_top = query[1][2]
 
-    # Process args
-    if len(argv) == 2:
-        name = argv[1]
-    elif len(argv) == 3:
-        q_bottom = int(argv[1])
-        q_top = int(argv[2])
-    elif len(argv) == 4:
-        name = argv[1]
-        q_bottom = int(argv[2])
-        q_top = int(argv[3])
-    # Index
+        # Process args
+        if len(argv) == 2:
+            local_name = argv[1]
+        elif len(argv) == 3:
+            q_bottom = int(argv[1])
+            q_top = int(argv[2])
+        elif len(argv) == 4:
+            local_name = argv[1]
+            q_bottom = int(argv[2])
+            q_top = int(argv[3])
+        # Index
+        for partition_count in partitions:
+            f = '{}/{}'.format(local_name, partition_count)
+            q_files[partition_count] = index(f, q_bottom, q_top, timestamps=True)
+        all_files.append(q_files)
+
+    # Put data into files
     for partition_count in partitions:
-        f = '{}/{}'.format(name, partition_count)
-        files = index(f, q_bottom, q_top, timestamps=True)
+        f = '{}/{}'.format(local_name, partition_count)
         with open(f + '/files.json', 'w') as file:
-            dump(files, file)
+            dump([all_files[i][partition_count] for i in range(len(queries))], file)
+
+
+if __name__ == '__main__':
+    main()
 
 
 
