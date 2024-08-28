@@ -25,6 +25,7 @@ def make_query(start, stop):
 def read_write(arg):
     query_list, sources, out_file, rg_size = arg
     sorted_column = pq.SortingColumn(0)
+    print("Writing to file " + out_file, end='\r')
     if (row_groups is None) or (row_groups == 'none'):
         query = query_list[0]
         data = regular_read(query, sources)
