@@ -1,6 +1,7 @@
-from params import queries, name, partitions
+from params import queries, name, partitions, row_groups
 from time import time
 from json import load, dump
+from os import listdir
 from sys import argv
 
 
@@ -23,7 +24,11 @@ def index(folder, query_bottom, query_top, timestamps=False):
     i = search_bottom
     output = []
     while starts[i] < query_top:
-        output.append('{}/{}.parquet'.format(folder, starts[i]))
+        name_to_index = '{}/{}'.format(folder, starts[i])
+        if row_groups == 'optimize':
+            output += ['{}/{}'.format(name_to_index, pfile) for pfile in listdir(name_to_index)]
+        else:
+            output.append(name_to_index + '.parquet')
         i += 1
         if i == len(starts):
             break
