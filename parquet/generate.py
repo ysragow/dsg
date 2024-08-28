@@ -43,7 +43,7 @@ def read_write(arg):
             # print("Reading query {} for file {}".format(query, out_file))
             data.append(regular_read(query, sources))
         data = table_concat(data)[0]
-        print("Writing to file " + out_file)
+        # print("Writing to file " + out_file)
         pq.write_table(data, out_file, row_group_size=rg_size, sorting_columns=[sorted_column])
     elif str(row_groups).isdigit():
         data = regular_read(query_list[0], sources)
