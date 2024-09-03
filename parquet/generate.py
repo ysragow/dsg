@@ -25,7 +25,7 @@ def make_query(start, stop):
 def read_write(arg):
     query_list, sources, out_file, rg_size = arg
     sorted_column = pq.SortingColumn(0)
-    print("Writing to file " + out_file, end='\r')
+    print("Writing to file " + out_file + '                ', end='\r')
     if (row_groups is None) or (row_groups == 'none'):
         query = query_list[0]
         data = regular_read(query, sources)
@@ -35,16 +35,13 @@ def read_write(arg):
         data = regular_read(query_list[0], sources)
         pq.write_table(data, out_file)
     elif row_groups == 'optimize':
-        # print("Is this on?")
         sel = [(q[1][2] - q[0][2]) for q in queries]
         assert len(sel) == 2, "For now, this will only work if there are 2 queries"
         assert (sel[0] // sel[1]) == (sel[0] / sel[1]), 'The selectivity of the second query must divide the selectivity of the first query'
         data = []
         for query in query_list:
-            # print("Reading query {} for file {}".format(query, out_file))
             data.append(regular_read(query, sources))
         data = table_concat(data)[0]
-        # print("Writing to file " + out_file)
         pq.write_table(data, out_file, row_group_size=rg_size, sorting_columns=[sorted_column])
     elif str(row_groups).isdigit():
         data = regular_read(query_list[0], sources)
@@ -71,7 +68,7 @@ def generate(name, size, partitions, source=None):
         start_time = time()
         generate_two_column(size, name, 1)
         end_time = time()
-        print("Done in {} seconds".format(end_time - start_time))
+        print("Done in {} seconds\t\t\t".format(end_time - start_time))
 
     # Find the file size (NOTE: WILL NOT NECESSARILY HAVE ACCURATE NUMBER OF PARTITIONS)
     file_size = nid(size, partitions)

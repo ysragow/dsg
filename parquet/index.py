@@ -7,6 +7,7 @@ from sys import argv
 
 def index(folder, query_bottom, query_top, timestamps=False):
     start_time = time()
+    num_partitions = int(folder.split('/')[-1])
 
     # Binary search for smallest start less than or equal to bottom
     with open(folder + '/index.json', 'r') as file1:
@@ -36,7 +37,7 @@ def index(folder, query_bottom, query_top, timestamps=False):
     if timestamps:
         end_time = time()
         total_time = end_time - start_time
-        print("With {} partitions, found {} matching files in {} seconds".format(len(starts), len(output), total_time))
+        print("With {} partitions, found {} matching files in {} seconds".format(num_partitions, len(output), total_time))
         with open(folder + '/index_time', 'w') as file1:
             file1.write(str(total_time))
 
