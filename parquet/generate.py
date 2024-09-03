@@ -104,21 +104,24 @@ def generate(name, size, partitions, source=None):
 
         # While loop through chunks
         while start < size:
-            # print('Chunk loop, stop = {}, size = {}, chunk_size = {}'.format(stop, size, chunk_size))
+            print('Chunk loop, start = {}, stop = {}, size = {}, chunk_size = {}'.format(start, stop, size, chunk_size), end='\r')
             filters = []
             chunk_start = start
             starts.append(chunk_start)
-            print("Processing row group starting in {}".format(start), end='\r')
+            # print("Processing row group starting in {}".format(start), end='\r')
 
             # While loop through row groups in a chunk
             while (stop <= (chunk_size + chunk_start)) and (stop <= size):
-                # print('Row group loop, stop = {}'.format(stop))
-                print("Processing row group starting in {}".format(start), end='\r')
+                print('Row group loop, start = {}, stop = {}, size = {}, chunk_size = {}'.format(start, stop, size, chunk_size), end='\r')
+                # print("Processing row group starting in {}".format(start), end='\r')
                 stop = min(chunk_start + chunk_size, stop)
                 filters.append(make_query(start, stop))
                 start = stop
                 stop = start + rg_size
             all_filters.append(filters)
+
+        print("Done processing row groups               ", end='\r')
+
         for j in range(len(all_filters)):
             chunk_filters = all_filters[j]
             out_filters = []
