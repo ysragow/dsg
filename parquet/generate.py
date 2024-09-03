@@ -108,10 +108,12 @@ def generate(name, size, partitions, source=None):
             filters = []
             chunk_start = start
             starts.append(chunk_start)
+            print("Processing row group starting in {}".format(start), end='\r')
 
             # While loop through row groups in a chunk
             while (stop <= (chunk_size + chunk_start)) and (stop <= size):
                 # print('Row group loop, stop = {}'.format(stop))
+                print("Processing row group starting in {}".format(start), end='\r')
                 stop = min(chunk_start + chunk_size, stop)
                 filters.append(make_query(start, stop))
                 start = stop
@@ -160,7 +162,7 @@ def generate(name, size, partitions, source=None):
         for tup in process_tuples:
             read_write(tup)
     end_time = time()
-    print("Done in {} seconds".format(end_time - start_time))
+    print("Done in {} seconds              ".format(end_time - start_time))
 
     # Save the indices as a json
     with open(folder + '/index.json', 'w') as file:
