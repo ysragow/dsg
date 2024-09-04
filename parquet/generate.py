@@ -112,7 +112,7 @@ def generate(name, size, partitions, source=None):
             # print("Processing row group starting in {}".format(start), end='\r')
 
             # While loop through row groups in a chunk
-            while (stop <= chunk_stop) and (stop <= size) and (start < size) and (start < chunk_stop):
+            while (start < chunk_stop) and (start < size):
                 stop = min(chunk_stop, start + rg_size)
                 print('Row group loop, start = {}, stop = {}, size = {}, chunk_size = {}'.format(start, stop, size, chunk_size), end='\r')
                 # print("Processing row group starting in {}".format(start), end='\r')
