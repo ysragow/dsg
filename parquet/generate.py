@@ -148,16 +148,19 @@ def generate(name, size, partitions, source=None):
         while start < size:
             file_path = '{}/{}.parquet'.format(folder, start)
             filters = [make_query(start, stop)]
-            files = index(source_folder, start, stop)
+            if source:
+                files = index(source_folder, start, stop)
+            else:
+                files = [name + '/0.parquet']
             process_tuples.append((filters, files, file_path, None))
             # if source:
             #     files = index(source_folder, start, stop)
             #     process_tuples.append((filters, files, file_path, None))
             # else:
             #     pq.write_table(pq.read_table(base, filters=filters[0]), file_path)
-        starts.append(start)
-        start += file_size
-        stop += file_size
+            starts.append(start)
+            start += file_size
+            stop += file_size
     if source:
         with Pool(write_processes) as p:
             p.map(read_write, process_tuples)
