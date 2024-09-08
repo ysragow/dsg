@@ -30,7 +30,7 @@ def read_write(arg):
         query = query_list[0]
         data = regular_read(query, sources)
         bound = query[1][2] - query[0][2]
-        pq.write_table(data, out_file, row_group_size=(bound+1), sorting_columns=[sorted_column])
+        pq.write_table(data, out_file, sorting_columns=[sorted_column])
     elif row_groups == 'default':
         data = regular_read(query_list[0], sources)
         pq.write_table(data, out_file)
