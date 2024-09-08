@@ -220,6 +220,6 @@ def regular_read(filters, files, scan=False, timestamps=False, verbose=False):
     if timestamps:
         end_time = time()
         if verbose:
-            print("Regular Read {} rows in {} seconds".format(output if scan else output.shape, end_time - start_time))
+            print("Regular Read scanned {} rows in {} seconds".format(output if scan else output.shape, end_time - start_time))
         return end_time - start_time
     return output
