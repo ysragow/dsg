@@ -49,8 +49,10 @@ def bandwidth(direc):
         dump(output, f)
 
 
-if __name__ == '__main__':
-    verbosity = False
+def main(verbosity=False):
+
+    from params import queries, name
+
     offset = 0
     query = queries[0]
     for i in range(len(argv)):
@@ -97,3 +99,7 @@ if __name__ == '__main__':
     with open(name + '/query_times.json', 'w') as file:
         dump(overall_dict, file)
     bandwidth(name)
+
+
+if __name__ == '__main__':
+    main()
