@@ -1,5 +1,8 @@
 from sys import argv
 from json import load, dump
+from parallel import pooled_read, parallel_read, regular_read
+from params import queries
+from pyarrow.parquet import write_table
 import query
 
 
@@ -70,14 +73,68 @@ def get_min(j, path=None):
         raise Exception('Invalid data. {} is not a dictionary or a number'.format(data))
 
 
+def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, func='regular', num_proc=10):
+    """
+    Run sanity tests by running the same query on two sets of files
+    :param files_1: The first set of files
+    :param files_2: The second set of files
+    :param save_data: Whether to save the outputs to 'data_1.parquet' and 'data_2.parquet'
+    :param print_data: How many lines to print of the output of each file
+    :param verbosity: Whether to print timestamps in the running of pooled_read
+    :param func: Which function to use to read the data (one of regular, parallel, or pooled)
+    :param num_proc: How many processes to use.  Default 10
+    """
+    filters = [queries[0]]
+    kwargs = {'scan': False, 'verbose': verbosity}
+    f = None
+    if func == 'regular':
+        f = regular_read
+        args = [filters, files_1]
+    elif func == 'parallel':
+        f = parallel_read
+        args = [filters, files_1, num_proc]
+    elif func == 'pooled':
+        f = pooled_read
+        args = [filters, files_1, num_proc]
+    else:
+        raise Exception("func must be one of 'regular', 'parallel', or 'pooled'")
+    output_1_og = f(*args, **kwargs)
+    args[1] = files_2
+    output_2_og = f(*args, **kwargs)
+    if save_data:
+        write_table(output_1_og, 'data_1.parquet')
+        write_table(output_2_og, 'data_2.parquet')
+    if print_data != 0:
+        output_1 = output_1_og.to_pandas()
+        output_2 = output_2_og.to_pandas()
+        print('Data from source 1:')
+        print(output_1.head(print_data))
+        print('Data from source 2:')
+        print(output_2.head(print_data))
+        del output_1
+        del output_2
+    output_1_og = output_1_og.sort_by('A')
+    output_2_og = output_2_og.sort_by('A')
+    output_1 = output_1_og.to_pandas()
+    output_2 = output_2_og.to_pandas()
+    is_equal = output_1.equals(output_2)
+    if is_equal:
+        print("They are equal")
+    else:
+        print("They are not equal")
+        print("Differences:")
+        print(output_1.compare(output_2))
+
+
+
 if __name__ == '__main__':
     if len(argv) < 2:
         raise Exception("Which function do you want to call?")
-    if argv[1] == 'min':
+    elif argv[1] == 'min':
         if len(argv) != 3:
             raise Exception("This function takes 1 argument")
         print(get_min(argv[2]))
-    if argv[1] == 'mean':
+    elif argv[1] == 'mean':
         if len(argv) not in (3, 4):
             raise Exception("This function takes 1 or 2 arguments argument")
         verbose = False
@@ -85,5 +142,38 @@ if __name__ == '__main__':
             if argv[3] == '-v':
                 verbose = True
         get_average(int(argv[2]), verbose)
+    elif argv[1] == 'test':
+        if len(argv) < 4:
+            raise Exception('This function takes 2 or more arguments')
+        args = []
+        all_kwargs = {}
+        kwarg_list = []
+        for i in range(2):
+            with open(argv[2 + i] + '/files.json') as file:
+                args.append(load(file)[0])
+        if len(argv) > 4:
+            assert argv[4][0] == '-', 'You cannot have more than 2 arguments without specifying them first'
+            duplicated = False
+            for c in argv[4]:
+                if c == '-':
+                    continue
+                elif c == 'v':
+                    all_kwargs['verbosity'] = True
+                elif c == 's':
+                    all_kwargs['save_data'] = True
+                elif c in 'nfp':
+                    if c in kwarg_list:
+                        duplicated = True
+                    kwarg_list.append(c)
+                else:
+                    raise Exception('Unrecognized parameter: ' + c)
+            assert not duplicated, 'Duplicated argument'
+            assert len(kwarg_list) + 5 == len(argv), 'Number of arguments given does not match number of parameters requiring arguments'
+            arg_dict = {'n': 'num_proc', 'p': 'print_data', 'f': 'func'}
+            for i in range(len(kwarg_list)):
+                all_kwargs[arg_dict[kwarg_list[i]]] = argv[i + 5] if kwarg_list[i] == 'f' else int(argv[i + 5])
+        get_test(*args, **all_kwargs)
+    else:
+        print('Not a valid function')
 
 

@@ -121,6 +121,9 @@ def parallel_read(filters, files, processes, scan=False, timestamps=False, verbo
     # Timestamps and return
     end_query = time()
     end_concat = time()
+    if verbose:
+        num_rows = output if scan else output.shape[0]
+        print('Parallel Read with {} processes scanned {} rows in {} seconds'.format(processes, num_rows, end_concat - start_time))
     if timestamps:
         if verbose2:
             print('\n')
@@ -130,8 +133,6 @@ def parallel_read(filters, files, processes, scan=False, timestamps=False, verbo
             print("Size: ", output if scan else output.shape)
             print("Total Time: ", end_concat - start_time)
             print('\n')
-        elif verbose and scan:
-            print('Parallel Read with {} processes scanned {} rows in {} seconds'.format(processes, output, end_concat - start_time))
         return end_concat - start_time
     return output
 
@@ -178,6 +179,8 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
     :param processes: Number of  processes
     :param scan: Whether to scan instead of read
     :param timestamps: whether to print timestamps of how long the query takes
+    :param verbose: whether to print things
+    :param verbose2: whether to print even more things
     :return: A pyarrow table containing the contents of every file
     """
     start_time = time()
@@ -188,6 +191,9 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
     end_query = time()
     output = sum(output) if scan else table_concat(output)[0]
     end_concat = time()
+    if verbose:
+        num_rows = output if scan else output.shape[0]
+        print('Pooled Read with {} processes scanned {} rows in {} seconds'.format(processes, num_rows, end_concat - start_time))
     if timestamps:
         if verbose2:
             print('\n')
@@ -196,8 +202,6 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
             print("Size: ", output if scan else output.shape)
             print("Total Time: ", end_concat - start_time)
             print('\n')
-        elif verbose and scan:
-            print('Pooled Read with {} processes scanned {} rows in {} seconds'.format(processes, output, end_concat - start_time))
         return end_concat - start_time
     return output
 
@@ -209,6 +213,7 @@ def regular_read(filters, files, scan=False, timestamps=False, verbose=False):
     :param files: A list of files to read
     :param scan: Whether to scan instead of read
     :param timestamps: whether to print timestamps for reading
+    :param verbose: whether to print things
     :return: All the data in the files, concatenated into one
     """
     output = []
@@ -217,9 +222,10 @@ def regular_read(filters, files, scan=False, timestamps=False, verbose=False):
         table = parquet.read_table(file, filters=filters)
         output.append(table.shape[0] if scan else table)
     output = sum(output) if scan else table_concat(output)[0]
+    end_time = time()
+    if verbose:
+        num_rows = output if scan else output.shape[0]
+        print("Regular Read scanned {} rows in {} seconds".format(num_rows, end_time - start_time))
     if timestamps:
-        end_time = time()
-        if verbose:
-            print("Regular Read scanned {} rows in {} seconds".format(output if scan else output.shape, end_time - start_time))
         return end_time - start_time
     return output
