@@ -2,7 +2,10 @@ from sys import argv
 from json import load, dump
 from parallel import pooled_read, parallel_read, regular_read
 from params import queries
-from pyarrow.parquet import write_table
+from pyarrow.parquet import read_table, write_table
+from fastparquet import ParquetFile
+from pandas import concat
+from time import time
 import query
 
 
@@ -126,6 +129,24 @@ def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, f
         print(output_1.compare(output_2))
 
 
+def get_read_all(path, rfunc=read_table):
+    """
+    Read all files at this path
+    :param path: path to the directory containing the files to be read
+    :param rfunc: function with which to read parquet files
+    """
+    print("Starting...")
+    start_time = time()
+    with open(path + '/files.json') as f:
+        files = load(f)[0]
+    data = []
+    for f in files:
+        data.append(rfunc(f).to_pandas())
+    print("Concatenating...")
+    output = concat(data)
+    end_time = time()
+    print("Found {} rows in {} seconds".format(output.shape[0], end_time - start_time))
+
 
 if __name__ == '__main__':
     if len(argv) < 2:
@@ -173,6 +194,16 @@ if __name__ == '__main__':
             for i in range(len(kwarg_list)):
                 all_kwargs[arg_dict[kwarg_list[i]]] = argv[i + 5] if kwarg_list[i] == 'f' else int(argv[i + 5])
         get_test(*args, **all_kwargs)
+    elif argv[1] == 'read':
+        if len(argv) not in (3, 4):
+            raise Exception("This function takes 1 or 2 arguments")
+        if len(argv) == 4:
+            if argv[3] == '-f':
+                get_read_all(argv[2], ParquetFile)
+            else:
+                raise Exception(argv[3] + ' is not a valid parameter')
+        else:
+            get_read_all(argv[2])
     else:
         print('Not a valid function')
 
