@@ -193,6 +193,7 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
     end_concat = time()
     if verbose:
         num_rows = output if scan else output.shape[0]
+        end_concat = time()
         print('Pooled Read with {} processes scanned {} rows in {} seconds'.format(processes, num_rows, end_concat - start_time))
     if timestamps:
         if verbose2:
