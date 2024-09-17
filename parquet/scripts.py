@@ -2,7 +2,9 @@ from sys import argv
 from json import load, dump
 from parallel import pooled_read, parallel_read, regular_read
 from params import queries
+from metaparams import read
 from pyarrow.parquet import read_table, write_table
+import pyarrow as pa
 from fastparquet import ParquetFile
 from pandas import concat
 from time import time
@@ -108,14 +110,25 @@ def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, f
         write_table(output_1_og, 'data_1.parquet')
         write_table(output_2_og, 'data_2.parquet')
     if print_data != 0:
-        output_1 = output_1_og.to_pandas()
-        output_2 = output_2_og.to_pandas()
-        print('Data from source 1:')
-        print(output_1.head(print_data))
-        print('Data from source 2:')
-        print(output_2.head(print_data))
-        del output_1
-        del output_2
+        if read == 'pyarrow':
+            output_1 = output_1_og.to_pandas()
+            output_2 = output_2_og.to_pandas()
+            print('Data from source 1:')
+            print(output_1.head(print_data))
+            print('Data from source 2:')
+            print(output_2.head(print_data))
+            del output_1
+            del output_2
+        elif read == 'fastparquet':
+            print('Data from source 1:')
+            print(output_1_og.head(print_data))
+            print('Data from source 2:')
+            print(output_2_og.head(print_data))
+    if read == 'fastparquet':
+        output_1_og = output_1_og.reset_index(drop=True)
+        output_2_og = output_2_og.reset_index(drop=True)
+        output_1_og = pa.Table.from_pandas(output_1_og)
+        output_2_og = pa.Table.from_pandas(output_2_og)
     output_1_og = output_1_og.sort_by('A')
     output_2_og = output_2_og.sort_by('A')
     output_1 = output_1_og.to_pandas()
@@ -129,7 +142,7 @@ def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, f
         print(output_1.compare(output_2))
 
 
-def get_read_all(path, rfunc=read_table):
+def get_read_all(path, rfunc=read_table, filters=None):
     """
     Read all files at this path
     :param path: path to the directory containing the files to be read

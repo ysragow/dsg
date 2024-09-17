@@ -1,8 +1,26 @@
 from multiprocessing import Pool, Process, Queue
-from pyarrow import concat_tables, parquet
+from pyarrow import concat_tables as ar_concat, parquet
 from time import time
 from qd.qd_query import Query
 from qd.qd_table import Table
+from metaparams import read
+from pandas import concat as pa_concat
+from fastparquet import ParquetFile
+
+
+def read_pq(file, filters=None):
+    """
+    Read a parquet file according to the metaparams
+    :param file: Path to a file
+    :param filters: Filters
+    :return: Some kind of a table gained from filtering on the parquet file
+    """
+    if read == 'pyarrow':
+        return parquet.read_table(file, filters=filters)
+    elif read == 'fastparquet':
+        return ParquetFile(file).to_pandas(filters=filters, row_filter=True)
+    else:
+        raise Exception('Invalid value of read')
 
 
 def query_to_filters(query):
@@ -22,7 +40,12 @@ def table_concat(tables):
     if len(tables) < 2:
         return tables
     else:
-        return [concat_tables(tables)]
+        if read == 'pyarrow':
+            return [ar_concat(tables)]
+        elif read == 'fastparquet':
+            return [pa_concat(tables)]
+        else:
+            raise Exception('Invalid value of read')
 
 
 def filter_read(items):
@@ -33,7 +56,7 @@ def filter_read(items):
     """
     filters = items[0]
     file = items[1]
-    output = parquet.read_table(file, filters=filters)
+    output = read_pq(file, filters=filters)
     return output
 
 
@@ -45,7 +68,7 @@ def filter_scan(items):
     """
     filters = items[0]
     file = items[1]
-    output = parquet.read_table(file, filters=filters)
+    output = read_pq(file, filters=filters)
     return output.shape[0]
 
 
@@ -61,7 +84,7 @@ def filter_queue(files, filters, q, q2=None, scan=False):
     for file in files:
         if q2 is not None:
             q2.put('beginning to read ' + file)
-        output = parquet.read_table(file, filters=filters)
+        output = read_pq(file, filters=filters)
         if q2 is not None:
             q2.put('finished reading ' + file)
         q.put(output.shape[0] if scan else output)
@@ -220,7 +243,7 @@ def regular_read(filters, files, scan=False, timestamps=False, verbose=False):
     output = []
     start_time = time()
     for file in files:
-        table = parquet.read_table(file, filters=filters)
+        table = read_pq(file, filters=filters)
         output.append(table.shape[0] if scan else table)
     output = sum(output) if scan else table_concat(output)[0]
     end_time = time()
