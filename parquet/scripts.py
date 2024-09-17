@@ -21,10 +21,8 @@ def get_average(n, v=False):
     name = query.name
     print(name + '/query_times.json')
     for i in range(n):
-        print('Querying...')
         with open('query.py', 'r') as q:
             query.main(v)
-        print('Reading...')
         with open(name + '/query_times.json', 'r') as q:
             new_data = load(q)
         if first:
