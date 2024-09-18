@@ -87,7 +87,7 @@ def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, f
     :param func: Which function to use to read the data (one of regular, parallel, or pooled)
     :param num_proc: How many processes to use.  Default 10
     """
-    filters = [queries[0]]
+    filters = queries[0]
     kwargs = {'scan': False, 'verbose': verbosity}
     f = None
     if func == 'regular':
