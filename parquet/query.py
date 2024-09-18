@@ -1,5 +1,5 @@
 from warnings import filterwarnings
-from params import name, partitions, verbosity_2, timestamps, processes, queries, query_types
+from params import name, partitions, verbosity_2, timestamps, processes, queries, query_types, scan
 from parallel import parallel_read, pooled_read, regular_read
 from json import load, dump
 from os.path import getsize
@@ -77,7 +77,7 @@ def main(verbosity=False):
         pooled_times_dict = {}
         if verbosity:
             print("Partitions: {}".format(partition_count))
-        kwarg = {'scan': True, 'timestamps': timestamps, 'verbose': verbosity}
+        kwarg = {'scan': scan, 'timestamps': timestamps, 'verbose': verbosity}
         for process_count in processes:
             arg = [process_count]
             if 'parallel' in query_types:
