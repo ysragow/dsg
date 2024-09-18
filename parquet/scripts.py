@@ -92,18 +92,19 @@ def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, f
     f = None
     if func == 'regular':
         f = regular_read
-        args = [filters, files_1]
+        argmnts = [filters, files_1]
     elif func == 'parallel':
         f = parallel_read
-        args = [filters, files_1, num_proc]
+        argmnts = [filters, files_1, num_proc]
     elif func == 'pooled':
         f = pooled_read
-        args = [filters, files_1, num_proc]
+        argmnts = [filters, files_1, num_proc]
     else:
         raise Exception("func must be one of 'regular', 'parallel', or 'pooled'")
-    output_1_og = f(*args, **kwargs)
-    args[1] = files_2
-    output_2_og = f(*args, **kwargs)
+    print(func + ' read with args ' + str(argmnts) + ' and kwargs ' + str(kwargs))
+    output_1_og = f(*argmnts, **kwargs)
+    argmnts[1] = files_2
+    output_2_og = f(*argmnts, **kwargs)
     if save_data:
         write_table(output_1_og, 'data_1.parquet')
         write_table(output_2_og, 'data_2.parquet')
