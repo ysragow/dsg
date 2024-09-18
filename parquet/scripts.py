@@ -101,7 +101,7 @@ def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, f
         argmnts = [filters, files_1, num_proc]
     else:
         raise Exception("func must be one of 'regular', 'parallel', or 'pooled'")
-    print(func + ' read with args ' + str(argmnts) + ' and kwargs ' + str(kwargs))
+    # print(func + ' read with args ' + str(argmnts) + ' and kwargs ' + str(kwargs))
     output_1_og = f(*argmnts, **kwargs)
     argmnts[1] = files_2
     output_2_og = f(*argmnts, **kwargs)
