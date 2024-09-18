@@ -89,6 +89,8 @@ def main(verbosity=False):
         pooled_dict[partition_count] = pooled_times_dict
         if 'regular' in query_types:
             regular_dict[partition_count] = run_all(regular_read, files_list, [], kwarg)
+    if not scan:
+        return
     overall_dict = {}
     if 'regular' in query_types:
         overall_dict['regular'] = regular_dict
