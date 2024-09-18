@@ -11,7 +11,7 @@ filterwarnings('ignore')
 def run_all(f, files, args, kwargs):
     total = 0
     for j in range(len(queries)):
-        q = queries[j]
+        q = [queries[j]]
         query_files = files[j]
         print(f.__repr__().split(' ')[1] + ' with args ' + str([q, query_files] + args) + 'and kwargs ' + str(kwargs))
         total += f(q, query_files, *args, **kwargs)
