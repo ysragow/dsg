@@ -31,6 +31,9 @@ def read_write(arg):
         data = regular_read(query, sources)
         bound = query[1][2] - query[0][2]
         pq.write_table(data, out_file, sorting_columns=[sorted_column])
+    elif row_groups == 'unoptimize':
+        data = regular_read(query_list[0], sources)
+        pq.write_table(data, out_file, row_group_size=rg_size, sorting_columns=[sorted_column])
     elif row_groups == 'default':
         data = regular_read(query_list[0], sources)
         pq.write_table(data, out_file)
@@ -92,7 +95,7 @@ def generate(name, size, partitions, source=None):
         file_count = nid(large_select, file_size)
         chunk_size = file_size * file_count
         rg_size = nid(chunk_size, file_count * sel_ratio)
-        # print("rg_size: ", rg_size)
+        print("Row group size: ", rg_size)
         # print("chunk_size: ", chunk_size)
         # print("file_count: ", file_count)
         # print("sel_ratio: ", sel_ratio)
@@ -145,6 +148,12 @@ def generate(name, size, partitions, source=None):
                 process_tuples.append((query_list, sources, '{}/{}.parquet'.format(file_path, k), rg_size))
 
     else:
+        large_select = queries[0][1][2] - queries[0][0][2]
+        small_select = queries[1][1][2] - queries[1][0][2]
+        sel_ratio = large_select // small_select
+        file_size = size // partitions
+        rg_size = file_size // sel_ratio
+        print("Row group size: ", rg_size)
         while start < size:
             file_path = '{}/{}.parquet'.format(folder, start)
             filters = [make_query(start, stop)]
@@ -152,7 +161,10 @@ def generate(name, size, partitions, source=None):
                 files = index(source_folder, start, stop)
             else:
                 files = [name + '/0.parquet']
-            process_tuples.append((filters, files, file_path, None))
+            if row_groups == 'unoptimize':
+                process_tuples.append((filters, files, file_path, rg_size))
+            else:
+                process_tuples.append((filters, files, file_path, None))
             # if source:
             #     files = index(source_folder, start, stop)
             #     process_tuples.append((filters, files, file_path, None))
