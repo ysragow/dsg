@@ -1,14 +1,7 @@
 from sys import argv
 from json import load, dump
-from parallel import pooled_read, parallel_read, regular_read
 from params import queries
 from metaparams import read
-from pyarrow.parquet import read_table, write_table
-import pyarrow as pa
-from fastparquet import ParquetFile
-from pandas import concat
-from time import time
-import query
 
 
 def get_average(n, v=False):
@@ -16,8 +9,14 @@ def get_average(n, v=False):
     Takes the average over n runs of query.py and writes it to query_times.json
     :param n: the number of times to run query.py
     """
+
+    import query
+    from numpy import sqrt
+
     first = True
+    second = False
     data = None
+    variance = {}
     name = query.name
     print(name + '/query_times.json')
     for i in range(n):
@@ -28,27 +27,50 @@ def get_average(n, v=False):
         if first:
             data = new_data
             first = False
+            second = True
         else:
             for q_type in data.keys():
                 q_data = data[q_type]
+                if second:
+                    variance[q_type] = {}
+                vq_data = variance[q_type]
                 nq_data = new_data[q_type]
                 for num_part in q_data.keys():
                     if q_type == 'regular':
+                        if second:
+                            vq_data[num_part] = q_data[num_part] ** 2
+                        vq_data[num_part] += (nq_data[num_part] ** 2)
                         q_data[num_part] += nq_data[num_part]
                         # print('Total for {} with {} partitions: {}'.format(q_type, num_part, q_data[num_part]))
                         if i == (n - 1):
                             q_data[num_part] /= n
+                            vq_data[num_part] /= n
+                            vq_data[num_part] -= (q_data[num_part] ** 2)
+                            vq_data[num_part] = sqrt(vq_data[num_part])
                     else:
                         p_data = q_data[num_part]
                         np_data = nq_data[num_part]
+                        if second:
+                            vq_data[num_part] = {}
+                        vp_data = vq_data[num_part]
                         for num_proc in p_data.keys():
+                            if second:
+                                vp_data[num_proc] = p_data[num_proc] ** 2
+                            vp_data[num_proc] += (np_data[num_proc] ** 2)
                             p_data[num_proc] += np_data[num_proc]
                             # print('Total for {} with {} partitions and {} processes: {}'.format(q_type, num_part, num_proc, p_data[num_proc]))
                             if i == (n - 1):
                                 p_data[num_proc] /= n
+                                vp_data[num_proc] /= n
+                                vp_data[num_proc] -= (p_data[num_proc] ** 2)
+                                vp_data[num_proc] = sqrt(vp_data[num_proc])
+            if second:
+                second = False
     print('Writing')
     with open(name + '/query_times.json', 'w') as q:
         dump(data, q)
+    with open(name + '/variances.json', 'w') as q:
+        dump(variance, q)
 
 
 def get_min(j, path=None):
@@ -87,6 +109,11 @@ def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, f
     :param func: Which function to use to read the data (one of regular, parallel, or pooled)
     :param num_proc: How many processes to use.  Default 10
     """
+
+    from parallel import pooled_read, parallel_read, regular_read
+    from pyarrow.parquet import write_table
+    import pyarrow as pa
+
     filters = [queries[0]]
     kwargs = {'scan': False, 'verbose': verbosity}
     f = None
@@ -141,12 +168,23 @@ def get_test(files_1, files_2, save_data=False, print_data=0, verbosity=False, f
         print(output_1.compare(output_2))
 
 
-def get_read_all(path, rfunc=read_table, filters=None):
+def get_read_all(path, rfunc=None, filters=None):
     """
     Read all files at this path
     :param path: path to the directory containing the files to be read
     :param rfunc: function with which to read parquet files
     """
+
+    from pandas import concat
+    from time import time
+
+    if rfunc is None:
+        from pyarrow.parquet import read_table
+        rfunc = read_table
+    elif rfunc == 'parquet':
+        from fastparquet import ParquetFile
+        rfunc = ParquetFile
+
     print("Starting...")
     start_time = time()
     with open(path + '/files.json') as f:
@@ -158,6 +196,14 @@ def get_read_all(path, rfunc=read_table, filters=None):
     output = concat(data)
     end_time = time()
     print("Found {} rows in {} seconds".format(output.shape[0], end_time - start_time))
+
+
+def get_get(path, *keys):
+    with open(path, 'r') as f:
+        data = load(f)
+    for key in keys:
+        data = data[key]
+    return data
 
 
 if __name__ == '__main__':
@@ -211,11 +257,15 @@ if __name__ == '__main__':
             raise Exception("This function takes 1 or 2 arguments")
         if len(argv) == 4:
             if argv[3] == '-f':
-                get_read_all(argv[2], ParquetFile)
+                get_read_all(argv[2], 'parquet')
             else:
                 raise Exception(argv[3] + ' is not a valid parameter')
         else:
             get_read_all(argv[2])
+    elif argv[1] == 'get':
+        if len(argv) < 3:
+            raise Exception("This function takes 1 or more arguments")
+        print(get_get(*argv[2:]))
     else:
         print('Not a valid function')
 
