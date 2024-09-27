@@ -2,7 +2,7 @@ import pyarrow.parquet as pq
 from warnings import filterwarnings
 from os import path, mkdir
 from parquet import generate_two_column
-from params import size as p_size, partitions as p_partitions, name as p_name, write_processes, row_groups, queries
+from params import size as p_size, partitions as p_partitions, name as p_name, write_processes, row_groups, queries, prev
 from time import time
 from json import dump
 from index import index
@@ -205,4 +205,4 @@ if __name__ == '__main__':
             prev_count = p_partitions[i-1]
             generate(p_name, p_size, partition_count, source=prev_count)
         else:
-            generate(p_name, p_size, partition_count)
+            generate(p_name, p_size, partition_count, source=prev)
