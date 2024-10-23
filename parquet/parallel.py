@@ -4,7 +4,7 @@ from time import time
 from qd.qd_query import Query
 from qd.qd_table import Table
 from metaparams import read
-from pandas import concat as pa_concat
+from pandas import DataFrame, concat as pa_concat
 from fastparquet import ParquetFile
 
 
@@ -22,7 +22,11 @@ def read_pq(file, filters=None):
         # return ParquetFile(file).to_pandas(filters=filters, row_filter=True).reset_index(drop=True)
 
         # new code (NOTE: DOES NOT FILTER BEYOND ROW GROUPS)
-        return table_concat(list(ParquetFile(file).iter_row_groups(filters=filters)))[0]
+        output = table_concat(list(ParquetFile(file).iter_row_groups(filters=filters)))
+        if len(output) == 0:
+            return DataFrame({})
+        else:
+            return output[0]
     else:
         raise Exception('Invalid value of read')
 
