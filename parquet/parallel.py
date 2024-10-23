@@ -18,7 +18,11 @@ def read_pq(file, filters=None):
     if read == 'pyarrow':
         return parquet.read_table(file, filters=filters)
     elif read == 'fastparquet':
-        return ParquetFile(file).to_pandas(filters=filters, row_filter=True).reset_index(drop=True)
+        # old code
+        # return ParquetFile(file).to_pandas(filters=filters, row_filter=True).reset_index(drop=True)
+
+        # new code (NOTE: DOES NOT FILTER BEYOND ROW GROUPS)
+        return table_concat(list(ParquetFile(file).iter_row_groups(filters=filters)))
     else:
         raise Exception('Invalid value of read')
 
