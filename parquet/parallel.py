@@ -22,7 +22,7 @@ def read_pq(file, filters=None):
         # return ParquetFile(file).to_pandas(filters=filters, row_filter=True).reset_index(drop=True)
 
         # new code (NOTE: DOES NOT FILTER BEYOND ROW GROUPS)
-        return table_concat(list(ParquetFile(file).iter_row_groups(filters=filters)))
+        return table_concat(list(ParquetFile(file).iter_row_groups(filters=filters)))[0]
     else:
         raise Exception('Invalid value of read')
 
