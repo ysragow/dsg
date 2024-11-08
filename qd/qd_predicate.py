@@ -63,18 +63,24 @@ class Predicate:
     This skeleton class will never be called.  It does not intersect any other predicate.
     """
 
-    def __init__(self, op, column):
+    def __init__(self, op, column, value):
         self.op = op
         self.column = column
+        self.value = value
         self.comparative = False
         self.str_right = ''
-        assert (op.symbol == 'IN') != column.numerical, "This operation cannot be used on this column"
+        if (op.symbol == 'IN') == column.numerical:
+            print('Column name:', column.name)
+            print('Predicate symbol:', op.symbol)
+            print('Column type:', column.ctype)
+            print('Column is numerical:', column.numerical)
+            assert False, "This operation cannot be used on this column"
 
     def to_dnf(self):
         """
         :return: this predicate as a DNF expression
         """
-        return self.column.name, self.op.symbol, self.str_right
+        return self.column.name, self.op.symbol, self.value
 
     def __contains__(self, item):
         """

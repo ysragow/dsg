@@ -12,7 +12,7 @@ class Categorical(Predicate):
         :param column: the column this predicate breaks on
         :param categories: the set of categories included in this predicate
         """
-        super().__init__(op, column)
+        super().__init__(op, column, list(categories))
         self.values = categories
         self.str_right = str(categories)
         assert (not column.numerical), "This column cannot be used for a categorical predicate"
@@ -55,7 +55,7 @@ class Numerical(Predicate):
         :param column: the column this predicate breaks on
         :param num: the number that we measure against the column value
         """
-        super().__init__(op, column)
+        super().__init__(op, column, num)
         self.str_right = str(num)
         self.num = num
         assert column.numerical, "This column cannot be used for a numerical predicate"
@@ -102,7 +102,7 @@ class CatComparative(Predicate):
         :param col1: the column this predicate breaks on
         :param col2: the column this predicate breaks on
         """
-        super().__init__(op, col1)
+        super().__init__(op, col1, col2)
         self.str_right = str(col2)
         self.comparative = True
         self.col2 = col2
@@ -138,7 +138,7 @@ class NumComparative(Predicate):
         :param col1: the column this predicate breaks on
         :param col2: the column this predicate breaks on
         """
-        super().__init__(op, col1)
+        super().__init__(op, col1, col2)
         self.str_right = str(col2)
         self.col2 = col2
         self.comparative = True
@@ -166,11 +166,10 @@ class NumComparative(Predicate):
             ops = [Operator('<='), Operator('>=')]
         for i in range(len(ops)):
             p1 = plist[i]
-            p2 = plist[-i-1]
+            p2 = plist[-i - 1]
             # Either one is strictly greater than the other, or they are equal and all operations allow equality
-            output &= (self.op(p1.num, p2.num) and (p1.num != p2.num)) \
-                      or\
-                      all((self.op(p1.num, p2.num), p1.op(p1.num, p2.num), p2.op(p1.num, p2.num)))
+            output &= (self.op(p1.num, p2.num) and (p1.num != p2.num)) or all(
+                (self.op(p1.num, p2.num), p1.op(p1.num, p2.num), p2.op(p1.num, p2.num)))
         return output
 
 
@@ -181,7 +180,7 @@ def pred_gen(pred_string, table):
     :return: a predicate based on the string
     """
     # print(pred_string)
-    col_name, op_name, value_name = pred_string.split(" ")
+    col_name, op_name, value_name = pred_string.split(" ", 2)
     column = table.get_column(col_name)
     assert column is not None, "The column " + col_name + " does not exist in this table."
     op = Operator(op_name)
@@ -192,15 +191,19 @@ def pred_gen(pred_string, table):
             return NumComparative(op, column, column2)
         else:
             return CatComparative(op, column, column2)
-    elif value_name.replace('.', '', 1).isdigit() or (value_name[1:].replace('.', '', 1).isdigit() and value_name[0] == '-'):
+    elif value_name.replace('.', '', 1).isdigit() or (
+            value_name[1:].replace('.', '', 1).isdigit() and value_name[0] == '-'):
         # Instance of a numerical predicate
         num = int(value_name) if value_name.isdigit() else float(value_name)
         assert column.numerical, "This is not a numerical column, so it cannot be compared with a number"
         return Numerical(op, column, num)
     elif (value_name[0] == '(') and (value_name[-1] == ')'):
-        values = set(json.loads(value_name.replace("'", '"').replace('(', '[').replace(')', ']')))
-        # this is not finished!
+        # Instance of a categorical predicate
+        values = set(value_name[1:-1].replace(', ', ',').split(','))
+        return Categorical(op, column, values)
+    elif (op.symbol == '=') and (value_name[0] == "'") and (value_name[-1] == "'"):
+        values = set()
+        values.add(value_name[1:-1])
+        return Categorical(Operator('IN'), column, values)
     else:
         raise Exception("Something's wrong")
-
-

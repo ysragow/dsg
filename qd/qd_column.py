@@ -12,7 +12,7 @@ class Column:
         self.name = name
         self.num = num
         self.ctype = ctype
-        self.numerical = ctype in ("REAL", "INTEGER")
+        self.numerical = ctype in ("REAL", "INTEGER", "FLOAT", "DATE")
 
     def __eq__(self, other):
         """

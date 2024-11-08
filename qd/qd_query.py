@@ -6,7 +6,7 @@ class Query:
     # contains a list of predicates
     def __init__(self, predicates, table):
         """
-        :param predicates: a list of predicates on the query in the form of a string "column_name operator value"
+        :param predicates: a list of predicates on the query
         :param table: a table object
         """
         self.table = table
@@ -15,8 +15,8 @@ class Query:
             self.predicates[column_name] = list()
         for predicate in predicates:
             self.predicates[predicate.column.name].append(predicate)
-            if predicate.comparative:
-                self.predicates[predicate.col2.name].append(predicate)
+            # if predicate.comparative:
+            #     self.predicates[predicate.col2.name].append(predicate)
 
     def list_preds(self):
         """
