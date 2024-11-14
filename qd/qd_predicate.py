@@ -5,6 +5,7 @@ operations = {
     '<=': lambda a, b: a <= b,
     '=': lambda a, b: a == b,
     'IN': lambda a, b: any([(i in b) for i in a]),
+    '!IN': lambda a, b: not any([(i in b) for i in a])
 }
 
 operations_opposites = {
@@ -12,6 +13,8 @@ operations_opposites = {
     '<': '>=',
     '>=': '<',
     '<=': '>',
+    'IN': '!IN',
+    '!IN': 'IN'
 }
 
 
@@ -19,7 +22,7 @@ class Operator:
     """
         General Operator Class
         - code: the string representing the operator
-        Operators: >, <, >=, <=, = (numerical), IN
+        Operators: >, <, >=, <=, = (numerical), IN, !IN
     """
     def __init__(self, symbol):
         self.symbol = symbol
@@ -69,7 +72,7 @@ class Predicate:
         self.value = value
         self.comparative = False
         self.str_right = ''
-        if (op.symbol == 'IN') == column.numerical:
+        if (op.symbol in ('IN', '!IN')) == column.numerical:
             print('Column name:', column.name)
             print('Predicate symbol:', op.symbol)
             print('Column type:', column.ctype)

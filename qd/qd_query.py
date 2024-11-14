@@ -1,4 +1,13 @@
-from qd.qd_predicate_subclasses import Predicate, Operator, Numerical, Categorical, CatComparative, NumComparative, pred_gen
+from qd.qd_predicate_subclasses import (
+    Predicate,
+    Operator,
+    Numerical,
+    Categorical,
+    CatComparative,
+    NumComparative,
+    pred_gen,
+    intersect,
+)
 from qd.qd_table import Table
 
 
@@ -62,9 +71,10 @@ class Workload:
     def __repr__(self):
         return str(self)
 
-    def split(self, pred):
+    def split(self, pred, prev_preds):
         """
-        :param pred: the predicate upon which to split the workload
+        :param pred: the predicates upon which to split the workload
+        :param prev_preds: the previous predicates in this workload
         :return: right_queries: a workload of queries matching the predicate
                  left_queries: a workload of queries matching the negation of the predicate
                  straddlers: a workload of queries matching both the predicate and its negation
@@ -76,19 +86,26 @@ class Workload:
         for query in self.queries:
             left_true = False
             right_true = False
-            if pred.intersect(query.predicates):
+            # if pred.intersect(query.predicates):
+            #     right_queries.append(query)
+            #     right_true = True
+            # if neg_pred.intersect(query.predicates):
+            #     left_queries.append(query)
+            #     left_true = True
+            if intersect(query.list_preds() + prev_preds + [pred]):
                 right_queries.append(query)
                 right_true = True
-            if neg_pred.intersect(query.predicates):
+            if intersect(query.list_preds() + prev_preds + [neg_pred]):
                 left_queries.append(query)
                 left_true = True
             if right_true & left_true:
                 straddlers.append(query)
             if not (right_true or left_true):
+                q1 = query.list_preds() + prev_preds + [pred]
+                print(q1, intersect(q1))
+                q2 = query.list_preds() + prev_preds + [neg_pred]
+                print(q2, intersect(q2))
                 raise Exception("Something is wrong with predicate check")
+
         return Workload(right_queries), Workload(left_queries), Workload(straddlers)
-
-
-
-
 

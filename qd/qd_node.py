@@ -58,7 +58,7 @@ class Node:
                 assert col_preds[1].column == col, "A top predicate for column " + col_preds[1].column.name + "has been assigned to column" + col.name
                 assert 'num' in dir(col_preds[0]), "Bottom predicate for this column must be numerical"
                 assert 'num' in dir(col_preds[1]), "Top predicate for this column must be numerical"
-                assert col_preds[0].num < col_preds[1].num, "Contradictory constraints on column " + col.name
+                assert col_preds[0].num <= col_preds[1].num, "Contradictory constraints on column " + col.name
             else:
                 assert len(col_preds) == 1, "Numerical columns must have exactly 2 predicates"
                 assert col_preds[0].op.symbol == 'IN', "The first predicate for this column must be IN"
@@ -166,7 +166,7 @@ class Root(Node):
         - Then, child1 (if it exists)
     """
     def __init__(self, table):
-        if os.path.isfile('data/' + table.name + '.pickle'):
+        if os.path.isfile('.'.join(table.path.split('.')[:-1]) + 'pickle'):
             raise Exception("A tree for this file exists.")
         else:
             # This tree has not been created yet, so we make a new one
@@ -174,10 +174,11 @@ class Root(Node):
             preds = {}
             for name in table.list_columns():
                 col = table.get_column(name)
+                index = col.num if (table.storage == 'csv') else col.name
                 if col.numerical:
-                    preds[name] = (Numerical(Operator('>='), col, mins[col.num]), Numerical(Operator('<='), col, maxes[col.num]))
+                    preds[name] = (Numerical(Operator('>='), col, mins[index]), Numerical(Operator('<='), col, maxes[index]))
                 else:
-                    preds[name] = (Categorical(Operator('IN'), col, categorical[col.num]),)
+                    preds[name] = (Categorical(Operator('IN'), col, categorical[index]),)
             super().__init__(table, preds, root=True)
             self.leaves = {self.table.name: self}
 

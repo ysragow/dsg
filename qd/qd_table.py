@@ -48,7 +48,14 @@ class Table:
         elif storage == 'parquet':
             data = ParquetFile(self.path)
             columns = data.columns
-            self.size = data.count
+            self.size = data.count()
+            df = data.to_pandas()
+            self.categorical = {}
+            for c in columns:
+                if not self.columns[c].numerical:
+                    # this is a categorical column
+                    self.categorical[c] = set([str(i) for i in df[c]])
+            del data
         else:
             raise Exception("Invalid storage.  Must be 'parquet' or 'csv'")
 
@@ -127,19 +134,16 @@ class Table:
         size = 0
         maxes = {}
         mins = {}
-        categorical = {}
+        categorical = self.categorical.copy() # pre-make this for efficiency
         numerical = {}
         if self.storage == 'parquet':
             data = ParquetFile(self.path)
             columns = data.columns
             for c in columns:
-                if np.issubdtype(data.dtypes[c], np.number):
+                if self.columns[c].numerical:
                     # this is a numeric column, so deal with it accordingly
                     maxes[c] = max(data.statistics['max'][c])
                     mins[c] = min(data.statistics['min'][c])
-                else:
-                    # this is a string or categorical column
-                    pass
         elif self.storage == 'csv':
             with open(self.path, 'r') as file:
                 data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
@@ -176,6 +180,7 @@ def table_gen(path):
     t_name = split_path[-1][:-8]
     columns = {}
     for i in range(len(file.columns)):
+        numerical = True
         c_name = file.columns[i]
         c_np_type = file.dtypes[c_name]
         if np.issubdtype(c_np_type, int):
@@ -186,7 +191,18 @@ def table_gen(path):
             c_type = 'DATE'
         else:
             c_type = 'STRING'
-        columns[c_name] = Column(c_name, i, c_type)
+            numerical = False
+        if numerical:
+            # Make a numerical column
+            cmax = max(file.statistics['max'][c_name])
+            cmin = min(file.statistics['min'][c_name])
+            columns[c_name] = Column(c_name, i, c_type, cmax=cmax, cmin=cmin)
+        else:
+            # Don't worry about the values - CatComparatives seem not to exist in TPC-H
+            # So just make a normal column for categoricals
+            columns[c_name] = Column(c_name, i, c_type)
+
+
     # print(dict([(column.name, column.ctype) for column in columns.values()]))
     output = Table(t_name, columns=columns, storage='parquet', folder='/'.join(split_path[:-1]))
     # print(dict([(column.name, column.ctype) for column in columns.values()]))

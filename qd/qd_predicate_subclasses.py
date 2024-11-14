@@ -1,6 +1,7 @@
 from qd.qd_predicate import Predicate, Operator
 from qd.qd_column import Column
 from qd.qd_table import Table
+from numpy import datetime64
 import json
 
 
@@ -16,7 +17,7 @@ class Categorical(Predicate):
         self.values = categories
         self.str_right = str(categories)
         assert (not column.numerical), "This column cannot be used for a categorical predicate"
-        assert op.symbol == 'IN', "Wrong type of predicate"
+        assert op.symbol in ('IN', '!IN'), "Wrong type of predicate"
 
     def __contains__(self, item):
         return item[self.column.num] in self.values
@@ -31,20 +32,11 @@ class Categorical(Predicate):
             output &= self.op(self.values, pred.values)
         return output
 
-    def flip(self, parent_pred=None):
+    def flip(self):
         """
-        :param parent_pred: the parent predicate
         :return: predicate: the inverse of this predicate
         """
-        assert parent_pred is not None, "This predicate requires a parent predicate"
-        assert parent_pred.column == self.column, "Parent predicate column does not match"
-        for item in self.values:
-            assert item in parent_pred.values, "This predicate is not a subset of the parent predicate"
-        output = set()
-        for item in parent_pred.values:
-            if item not in self.values:
-                output.add(item)
-        return Categorical(self.op, self.column, output)
+        return Categorical(self.op.flip(), self.column, self.values)
 
 
 class Numerical(Predicate):
@@ -66,7 +58,11 @@ class Numerical(Predicate):
         :param item: an item to be tested against this parameter
         :return: whether this item is in this predicate
         """
-        return self.op(item[self.column.num], self.num)
+        try:
+            return self.op(item[self.column.num], self.num)
+        except Exception as ex:
+            print(self.column, self.column.num, self.num)
+            raise ex
 
     def to_dnf(self):
         """
@@ -151,7 +147,13 @@ class NumComparative(Predicate):
         :param item: an item to be tested against this parameter
         :return: whether this item is in this predicate
         """
-        return self.op(item[self.column.num], item[self.col2.num])
+        try:
+            return self.op(item[self.column.num], item[self.col2.num])
+        except Exception as ex:
+            print(item)
+            print(self.column, self.column.num, self.col2, self.col2.num)
+            raise ex
+
 
     def intersect(self, preds):
         """
@@ -171,6 +173,317 @@ class NumComparative(Predicate):
             output &= (self.op(p1.num, p2.num) and (p1.num != p2.num)) or all(
                 (self.op(p1.num, p2.num), p1.op(p1.num, p2.num), p2.op(p1.num, p2.num)))
         return output
+
+    def flip(self):
+        return NumComparative(self.op.flip(), self.column, self.col2)
+
+
+def intersect(preds):
+    date_preds = []
+    num_preds = []
+    cat_preds = []
+    for pred in preds:
+        if pred.column.numerical:
+            if pred.column.ctype == 'DATE':
+                date_preds.append(pred)
+            else:
+                num_preds.append(pred)
+        else:
+            cat_preds.append(pred)
+    return cat_intersect(cat_preds) & num_intersect(date_preds) & num_intersect(num_preds)
+
+
+def cat_intersect(preds):
+    """
+    Checks whether a list of categorical predicates can all be satisfied
+    :param preds: A list of numeric predicates
+    :return: Whether there exists a point where they intersect
+    """
+    # No cat comparatives, so no need for an index
+    # Instead we map column names to sets of possible outcomes
+    col_sets = {}
+    col_not_sets = {}
+    for pred in preds:
+        if pred.op.symbol == '!IN':
+            if pred.column.name in col_not_sets:
+                for value in pred.values:
+                    col_not_sets[pred.column.name].add(value)
+            else:
+                col_not_sets[pred.column.name] = pred.values.copy()
+        elif pred.op.symbol == 'IN':
+            if pred.column.name in col_sets:
+                current_values = list(col_sets[pred.column.name])
+                for value in current_values:
+                    if value not in pred.values:
+                        col_sets[pred.column.name].remove(value)
+            else:
+                col_sets[pred.column.name] = pred.values.copy()
+        else:
+            raise Exception("Invalid Predicate: " + str(pred))
+    for column in col_sets.keys():
+        if column in col_not_sets:
+            for value in col_not_sets[column]:
+                if value in col_sets[column]:
+                    col_sets[column].remove(value)
+        if len(col_sets[column]) == 0:
+            return False
+    return True
+
+
+class ColumnNode:
+    """
+    Turns a column into a column node
+    """
+    def __init__(self, c, col_index):
+        """
+        Take a column and turn it into a column node
+        :param c: A column
+        :param col_index: A dictionary mapping all column names to their column nodes
+        NOTE: col_index IS SHARED AMONG ALL COLUMN NODES
+        """
+        self.col_index = col_index
+
+        # Linked list attributes
+        self.left = None
+        self.right = None
+
+        # Graph node attributes
+        # self.greater: a dictionary mapping columns greater than
+        # or equal to this one to a True or False to whether it is
+        # [ (True) or ( (False)
+        # self.smaller: a dictionary mapping columns smaller than
+        # or equal to this one to a True or False to whether it is
+        # [ (True) or ( (False)
+        # constrained to be at least as small as this one
+        # self.columns: the columns constrained to be equal contained
+        # within this node
+        # self.col_set: the names of the columns in self.columns
+        self.type = c.ctype in ('DATE', 'INTEGER')
+        self.greater = {}
+        self.smaller = {}
+        self.max = c.max
+        self.max_e = True
+        self.min = c.min
+        self.min_e = True
+        self.columns = [c.name]
+        self.name = c.name
+        self.col_set = {c.name}
+
+    def combine(self, other):
+        # Merge two ColumnNodes.  Return False if it raises a contradiction, else return True
+        self.type /= other.type
+
+        # Remove from linked list
+        if other.left is not None:
+            other.left.right = other.right
+        if other.right is not None:
+            other.right.left = other.left
+
+        all_columns = set(sum([self.columns, other.columns] + [list(d.keys()) for d in (
+            self.greater,
+            other.greater,
+            self.smaller,
+            other.smaller
+        )], []))
+        for c in all_columns:
+            if c in self.columns:
+                if c in other.smaller:
+                    if not other.smaller[c]:
+                        return False
+                    del other.smaller[c]
+                    del self.greater[other.name]
+                if c in other.greater:
+                    if not other.greater[c]:
+                        return False
+                    del other.greater[c]
+                    del self.smaller[other.name]
+            elif c in other.columns:
+                self.columns.append(c)
+                self.col_set.add(c)
+                self.col_index[c] = self
+            elif c in other.greater:
+                if c in self.greater:
+                    # Only still [ if both are [
+                    self.greater[c] &= other.greater[c]
+                    del other.greater[c]
+                    self.col_index[c].smaller[self.name] = self.smaller[c]
+                    del self.col_index[c].smaller[other.name]
+                else:
+                    self.greater[c] = other.greater[c]
+            elif c in other.smaller:
+                if c in self.smaller:
+                    # Only still [ if both are [
+                    self.smaller[c] &= other.smaller[c]
+                    del other.smaller[c]
+                    self.col_index[c].greater[self.name] = self.smaller[c]
+                    del self.col_index[c].greater[other.name]
+                else:
+                    self.smaller[c] = other.smaller[c]
+        return True
+
+    def set_min(self, n, e):
+        self.min = n
+        self.min_e = e
+        
+    def set_max(self, n, e):
+        self.max = n
+        self.max_e = e
+
+    def add_greater(self, c, e):
+        self.greater[c] = e
+
+    def add_smaller(self, c, e):
+        self.smaller[c] = e
+
+    def set_left(self, other):
+        # Only call this when len(self.smaller.keys()) = 0
+        self.left = other
+
+    def set_right(self, other):
+        # Only call this when len(self.smaller.keys()) = 0
+        self.right = other
+
+    def remove(self):
+        # Only call this when len(self.smaller.keys()) = 0
+        for c in self.greater.keys():
+            node = self.col_index[c]
+            e = self.greater[c]
+            if node.min == self.min:
+                node.set_min(self.min, (self.min_e & node.min_e & e))
+            elif node.min < self.min:
+                node.set_min(self.min, (self.min_e & e))
+            # Remove every associated node
+            for col in self.columns:
+                if col in node.smaller:
+                    del node.smaller[col]
+
+
+def num_intersect(preds):
+    """
+    Checks whether a list of numeric predicates can all be satisfied
+    :param preds: A list of numeric predicates
+    :return: Whether there exists a point where they intersect
+    """
+    # This index keeps track of which column names point to which node objects
+    # This is subject to change, so every ColumnNode needs to have access to this
+    index = {}
+
+    # Hopefully the code should be good enough that the order of adding nodes here doesn't matter
+    for pred in preds:
+        if pred.column.name not in index:
+            index[pred.column.name] = ColumnNode(pred.column, index)
+        if pred.comparative:
+            if pred.col2.name not in index:
+                index[pred.col2.name] = ColumnNode(pred.col2, index)
+            if pred.op.symbol == '=':
+                if not index[pred.column.name].combine(index[pred.col2.name]):
+                    return False
+            else:
+                e = pred.op.symbol in ('<=', '>=')
+                is_greater = pred.op.symbol in ('>', '>=')
+                greater = pred.column.name if is_greater else pred.col2.name
+                smaller = pred.col2.name if is_greater else pred.column.name
+                index[greater].add_smaller(smaller, e)
+                index[smaller].add_greater(greater, e)
+        else:
+            if pred.op.symbol == '=':
+                index[pred.column.name].set_min(pred.num, True)
+                index[pred.column.name].set_max(pred.num, True)
+            else:
+                e = pred.op.symbol in ('<=', '>=')
+                if pred.op.symbol in ('>', '>='):
+                    index[pred.column.name].set_min(pred.num, e)
+                else:
+                    index[pred.column.name].set_max(pred.num, e)
+
+    # Iterate through everything
+    zeroes_list_top = None
+    active_set = set()
+    for col_name in index.keys():
+        active_set.add(index[col_name].name)
+    for cname in active_set:
+        if len(index[cname].smaller.keys()) == 0:
+            index[cname].left = zeroes_list_top
+            if zeroes_list_top is not None:
+                zeroes_list_top.right = index[cname]
+            zeroes_list_top = index[cname]
+    while len(active_set) > 0:
+        # for c in active_set:
+        #     print("Active set:")
+        #     i = index[c]
+        #     print(i.name, i.smaller)
+        if zeroes_list_top is not None:
+            changed_set = set(index[c].name for c in zeroes_list_top.greater.keys())
+            zeroes_list_top.remove()
+            active_set.remove(zeroes_list_top.name)
+            zeroes_list_top = zeroes_list_top.left
+            if zeroes_list_top is not None:
+                zeroes_list_top.right = None
+            for cname in changed_set:
+                if len(index[cname].smaller.keys()) == 0:
+                    index[cname].left = zeroes_list_top
+                    if zeroes_list_top is not None:
+                        zeroes_list_top.right = index[cname]
+                    zeroes_list_top = index[cname]
+        elif len(active_set) > 0:
+            # There's a cycle.  Find it
+            cname = None
+            found_set = set()
+            for cname in active_set:
+                break
+            found_list = [cname]
+            cname = index[cname].name
+            while cname not in found_set:
+                found_set.add(cname)
+                col = index[cname]
+                cname = None
+                for cname in col.smaller.keys():
+                    break
+                cname = index[cname].name
+                found_list.append(cname)
+
+            # We now have a path leading to a cycle.  Extract the cycle
+            cycle_begun = False
+            all_e = True
+            prev = None
+            root = None
+            cycle_nodes = []
+            for cname in found_list:
+                if cycle_begun:
+                    current = index[cname]
+                    for cname2 in current.columns:
+                        if cname2 in prev.smaller:
+                            all_e &= prev.smaller[cname2]
+                    prev = current
+                    if prev.name != root.name:
+                        cycle_nodes.append(prev)
+                else:
+                    if cname == found_list[-1]:
+                        cycle_begun = True
+                        prev = index[cname]
+                        root = index[cname]
+            if not all_e:
+                return False
+            for node in cycle_nodes:
+                root.combine(node)
+                active_set.remove(node.name)
+
+            # Look for zeroes again
+            for cname in active_set:
+                if len(index[cname].smaller.keys()) == 0:
+                    if zeroes_list_top is not None:
+                        zeroes_list_top.right = index[cname]
+                    index[cname].left = zeroes_list_top
+                    zeroes_list_top = index[cname]
+
+    # It's over.  Breathe.  Check if things match.
+    for col in index.keys():
+        c = index[col]
+        if c.min > c.max:
+            return False
+        if (c.min == c.max) and not (c.min_e and c.max_e):
+            return False
+    return True
 
 
 def pred_gen(pred_string, table):
@@ -193,8 +506,12 @@ def pred_gen(pred_string, table):
             return CatComparative(op, column, column2)
     elif value_name.replace('.', '', 1).isdigit() or (
             value_name[1:].replace('.', '', 1).isdigit() and value_name[0] == '-'):
-        # Instance of a numerical predicate
+        # Instance of a numerical (non-date) predicate
         num = int(value_name) if value_name.isdigit() else float(value_name)
+        assert column.numerical, "This is not a numerical column, so it cannot be compared with a number"
+        return Numerical(op, column, num)
+    elif (list([len(s) for s in value_name.split('-')]) == [4, 2, 2]) and value_name.replace('-', '').isdigit():
+        num = datetime64(value_name)
         assert column.numerical, "This is not a numerical column, so it cannot be compared with a number"
         return Numerical(op, column, num)
     elif (value_name[0] == '(') and (value_name[-1] == ')'):

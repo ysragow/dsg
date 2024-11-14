@@ -3,7 +3,8 @@ from qd.qd_node import Node, Root
 from qd.qd_column import Column
 from qd.qd_table import Table
 from qd.qd_predicate import Operator
-from qd.qd_predicate_subclasses import pred_gen, Numerical
+from qd.qd_predicate_subclasses import pred_gen, Numerical, NumComparative, Categorical
+from fastparquet import ParquetFile
 import numpy as np
 import pickle
 import csv
@@ -67,19 +68,22 @@ def subset_gen(table, size):
     :param size: the size of the subset
     :return: a list of datapoints representing a subset of the table with size elements
     """
-    output = []
-    with open("data/" + table.name + ".csv") as file:
-        data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
-        data.__next__()
-        i = 0
-        for row in data:
-            num = np.random.randint(0, i+1)
-            if i < size:
-                output.append(row)
-            elif num < size:
-                output[num] = row
-            i += 1
-        return output
+    if table.storage == 'csv':
+        output = []
+        with open(table.path) as file:
+            data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
+            data.__next__()
+            i = 0
+            for row in data:
+                num = np.random.randint(0, i+1)
+                if i < size:
+                    output.append(row)
+                elif num < size:
+                    output[num] = row
+                i += 1
+            return output
+    elif table.storage == 'parquet':
+        return ParquetFile(table.path).to_pandas().sample(size)
 
 
 def all_predicates(data, table, columns=None):
@@ -90,16 +94,58 @@ def all_predicates(data, table, columns=None):
     :return: a list of all linear predicates separating this datapoints
     """
     predicates = []
-    if columns is None:
-        columns = table.list_columns()
-    for row in data:
-        for i in range(len(columns)):
-            column = table.get_column(columns[i])
-            predicates.append(Numerical(Operator('<'), column, row[column.num]))
+    columns = table.list_columns()
+    if type(data) == list:
+        # the data is a list
+        for row in data:
+            for i in range(len(columns)):
+                column = table.get_column(columns[i])
+                predicates.append(Numerical(Operator('<'), column, row[column.num]))
+    else:
+        # the data is a pandas dataframe
+        num_columns = []
+        date_columns = []
+        cat_columns = []
+        for c_ in columns:
+            c = table.columns[c_]
+            if c.numerical:
+                if c.ctype == 'DATE':
+                    date_columns.append(c)
+                else:
+                    num_columns.append(c)
+            else:
+                cat_columns.append(c)
+
+        # Every predicate comparing numbers
+        for c_1 in num_columns:
+            for c_2 in num_columns:
+                if c_1.name != c_2.name:
+                    predicates.append(NumComparative(Operator('<'), c_1, c_2))
+            # Every numerical predicate on real numbers
+            for num in data[c_1.name]:
+                predicates.append(Numerical(Operator('<'), c_1, num))
+
+        # Every predicate comparing dates
+        for c_1 in date_columns:
+            for c_2 in date_columns:
+                if c_1.name != c_2.name:
+                    predicates.append(NumComparative(Operator('<'), c_1, c_2))
+            # Every numerical predicate on dates
+            for num in data[c_1.name]:
+                predicates.append(Numerical(Operator('<'), c_1, num))
+
+        # Every categorical predicate (with set size of 1)
+        for c in cat_columns:
+            items = set()
+            for item in data[c.name]:
+                items.add(str(item))
+            for item in items:
+                predicates.append(Categorical(Operator('IN'), c, {item}))
+
     return predicates
 
 
-def tree_gen(table, workload, rank_fn, subset_size=60, node=None, root=None, save=False, columns=None):
+def tree_gen(table, workload, rank_fn, subset_size=60, node=None, root=None, prev_preds=None, save=False, columns=None):
     """
     :param table: a table object
     :param workload: a workload object
@@ -108,11 +154,13 @@ def tree_gen(table, workload, rank_fn, subset_size=60, node=None, root=None, sav
         param table: the same table as used prior
         param workload: a workload object
         param predicate: a predicate on the data
+        param prev_preds: previous preds used to split the data up to this point
         returns a ranking of how well the predicate splits the operation of the workload on the data.
                 better predicates rank higher, and the ranking should be 0 if it cannot be used
     :param subset_size: the size of the data subsets
     :param node: the corresponding node of this function.  used only for recursive calls
     :param root: the root node of the tree being built.  used only for recursive calls
+    :param prev_preds: previous predicates leading up to this one.  used only for recursive calls
     :param save: whether to save the generated tree
     :param columns: the columns that can be predicated on.  if none, then all columns can be predicated on
     :return: a root object corresponding to the root of a completed qd tree
@@ -120,22 +168,29 @@ def tree_gen(table, workload, rank_fn, subset_size=60, node=None, root=None, sav
     if node is None and root is None:
         node = Root(table)
         root = node
+        prev_preds = []
+    print("Generating subset...", end='\r')
     subset = subset_gen(table, subset_size)
+    print("Generating preds...", end='\r')
     preds = all_predicates(subset, table, columns=columns)
     best_pred = preds[0]
     top_score = 0
     for pred in preds:
-        score = rank_fn(subset, table, workload, pred)
+        print("acting on pred:", pred, '                                 ', end='\r')
+        score = rank_fn(subset, table, workload, pred, prev_preds)
         if score > top_score:
             best_pred = pred
             top_score = score
     if top_score > 0:
+        print('Choosing the following predicate:')
+        print(best_pred)
+        print('')
         child_right, child_left = root.split_leaf(node, best_pred)
         workload_right, workload_left, _ = workload.split(best_pred)
-        tree_gen(child_right.table, workload_right, rank_fn, subset_size, child_right, root)
-        tree_gen(child_left.table, workload_left, rank_fn, subset_size, child_left, root)
+        tree_gen(child_right.table, workload_right, rank_fn, subset_size, child_right, root, prev_preds + [best_pred])
+        tree_gen(child_left.table, workload_left, rank_fn, subset_size, child_left, root, prev_preds + [best_pred.flip()])
     if save:
-        with open('trees/' + table.name + '.pickle', 'w') as file:
+        with open('.'.join(table.path.split('.')[:-1]) + 'pickle', 'w') as file:
             pickle.dump(root, file)
     return root
 
@@ -146,15 +201,23 @@ def rank_fn_gen(min_size, multiply_sizes=False):
     :param multiply_sizes: whether to multiply the number of queries on a side by the number of datapoints on that side
     :return: a function ranking parameters
     """
-    def rank_fn(data, table, workload, predicate):
-        w_right, w_left, w_both = workload.split(predicate)
+    def rank_fn(data, table, workload, predicate, prev_preds):
+        w_right, w_left, w_both = workload.split(predicate, prev_preds)
         d_right = []
         d_left = []
-        for row in data:
-            if row in predicate:
-                d_right.append(row)
-            else:
-                d_left.append(row)
+        if type(data) == list:
+            for row in data:
+                if row in predicate:
+                    d_right.append(row)
+                else:
+                    d_left.append(row)
+        else:
+            # the data is a pandas dataframe
+            for row in data.itertuples(index=False):
+                if row in predicate:
+                    d_right.append(row)
+                else:
+                    d_left.append(row)
         if len(d_right)*table.size/len(data) < min_size:
             return 0
         if len(d_left)*table.size/len(data) < min_size:

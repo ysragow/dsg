@@ -111,4 +111,4 @@ s_4_1 = pred_gen('l_commitdate < l_receiptdate', table)
 t_4 = Template([s_4_1], [v_4_1, v_4_2], f_4, table)
 
 
-workload = sum([list([t() for _ in range(10)]) for t in [t_1, t_10, t_12, t_3, t_4]], [])
+workload = Workload(sum([list([t() for _ in range(10)]) for t in [t_1, t_10, t_12, t_3, t_4]], []))
