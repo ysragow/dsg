@@ -154,7 +154,6 @@ class NumComparative(Predicate):
             print(self.column, self.column.num, self.col2, self.col2.num)
             raise ex
 
-
     def intersect(self, preds):
         """
         :param preds: a dictionary mapping column names to predicates
@@ -174,7 +173,11 @@ class NumComparative(Predicate):
                 (self.op(p1.num, p2.num), p1.op(p1.num, p2.num), p2.op(p1.num, p2.num)))
         return output
 
-    def flip(self):
+    def to_dnf(self):
+        return self.column.name, self.op.symbol, self.col2.name
+
+
+    def flip(self, parent_pred=None):
         return NumComparative(self.op.flip(), self.column, self.col2)
 
 
@@ -271,7 +274,7 @@ class ColumnNode:
 
     def combine(self, other):
         # Merge two ColumnNodes.  Return False if it raises a contradiction, else return True
-        self.type /= other.type
+        self.type |= other.type
 
         # Remove from linked list
         if other.left is not None:
@@ -510,7 +513,7 @@ def pred_gen(pred_string, table):
         num = int(value_name) if value_name.isdigit() else float(value_name)
         assert column.numerical, "This is not a numerical column, so it cannot be compared with a number"
         return Numerical(op, column, num)
-    elif (list([len(s) for s in value_name.split('-')]) == [4, 2, 2]) and value_name.replace('-', '').isdigit():
+    elif (list([len(s) for s in value_name[:10].split('-')]) == [4, 2, 2]) and value_name[:10].replace('-', '').isdigit():
         num = datetime64(value_name)
         assert column.numerical, "This is not a numerical column, so it cannot be compared with a number"
         return Numerical(op, column, num)

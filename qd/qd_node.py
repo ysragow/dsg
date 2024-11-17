@@ -1,7 +1,7 @@
 import csv
 
 from qd.qd_predicate import Predicate, Operator
-from qd.qd_predicate_subclasses import Numerical, Categorical, pred_gen
+from qd.qd_predicate_subclasses import Numerical, Categorical, pred_gen, intersect
 from qd.qd_query import Query
 from qd.qd_table import Table
 import pickle
@@ -19,10 +19,10 @@ class Node:
     """
 
     # Setup Functions
-    def __init__(self, table, preds, root=False, split_pred=None):
+    def __init__(self, table, preds=None, root=False, split_pred=None):
         """
         :param table: a table object
-        :param preds: a dictionary mapping column names to a tuple containing the associated predicates
+        :param preds: a dictionary mapping column names to a tuple containing the associated predicates (deprecated)
         :param root: whether this node the root of the QD-tree
         :param split_pred: If this is not the root, this is the predicate on which this node split from its parent.
         Otherwise, it should be None
@@ -33,7 +33,16 @@ class Node:
         self.root = root
         self.child_right = None
         self.child_left = None
-        self.preds = preds
+        self.preds = {}
+        cats, mins, maxes = table.get_boundaries()
+        for cname in table.list_columns():
+            col = table.get_column(cname)
+            if col.numerical:
+                max_pred = Numerical(Operator('<='), col, maxes[cname])
+                min_pred = Numerical(Operator('>='), col, mins[cname])
+                self.preds[cname] = (min_pred, max_pred)
+            else:
+                self.preds[cname] = (Categorical(Operator('IN'), col, cats[cname]),)
         if not (root or split_pred):
             raise Exception("If this is not the root, a splitting predicate is required")
         self.split_pred = split_pred
@@ -108,12 +117,13 @@ class Node:
         # assert not self.leaf, "This function should not be called on the root node"
         # assert not pred.comparative, "A node cannot split on a comparative predicate"
         assert not self.is_split, "This node has already been split"
+        assert intersect(list(self.preds[pred.column.name]) + [pred]), "This predicate is not within the parent"
         old_preds = self.preds[pred.column.name]
         preds1 = {}
         preds2 = {}
         pred_alt = pred.flip(old_preds[0])
         for col in self.table.list_columns():
-            if col == pred.column.name:
+            if (col == pred.column.name) and (not pred.comparative):
                 # For the relevant column, change one predicate
                 if pred.column.numerical:
                     index = 0
@@ -122,7 +132,7 @@ class Node:
                         if not pred.op(old_preds[i].num, pred.num):
                             index = i
                             valid = not valid
-                    assert valid, "This predicate is not within the parent predicate"
+                    assert intersect(list(old_preds) + [pred]), "This predicate is not within the parent predicate"
                     new_preds1 = []
                     new_preds2 = []
                     for i in range(2):

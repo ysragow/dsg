@@ -3,9 +3,10 @@ from qd.qd_node import Node, Root
 from qd.qd_column import Column
 from qd.qd_table import Table
 from qd.qd_predicate import Operator
-from qd.qd_predicate_subclasses import pred_gen, Numerical, NumComparative, Categorical
+from qd.qd_predicate_subclasses import pred_gen, Numerical, NumComparative, Categorical, intersect
 from fastparquet import ParquetFile
 import numpy as np
+from json import dump, load, loads
 import pickle
 import csv
 import os
@@ -121,6 +122,7 @@ def all_predicates(data, table, columns=None):
             for c_2 in num_columns:
                 if c_1.name != c_2.name:
                     predicates.append(NumComparative(Operator('<'), c_1, c_2))
+                    predicates.append(NumComparative(Operator('>'), c_1, c_2))
             # Every numerical predicate on real numbers
             for num in data[c_1.name]:
                 predicates.append(Numerical(Operator('<'), c_1, num))
@@ -145,11 +147,11 @@ def all_predicates(data, table, columns=None):
     return predicates
 
 
-def tree_gen(table, workload, rank_fn, subset_size=60, node=None, root=None, prev_preds=None, save=False, columns=None):
+def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None, prev_preds=None, columns=None, block_size=1000):
     """
     :param table: a table object
     :param workload: a workload object
-    :param rank_fn: a function that operates on the following parameters:
+    :param rank_fn: a function that operates on the following parameters: (only for recursive calls)
         param data: a list containing some data
         param table: the same table as used prior
         param workload: a workload object
@@ -161,38 +163,64 @@ def tree_gen(table, workload, rank_fn, subset_size=60, node=None, root=None, pre
     :param node: the corresponding node of this function.  used only for recursive calls
     :param root: the root node of the tree being built.  used only for recursive calls
     :param prev_preds: previous predicates leading up to this one.  used only for recursive calls
-    :param save: whether to save the generated tree
     :param columns: the columns that can be predicated on.  if none, then all columns can be predicated on
-    :return: a root object corresponding to the root of a completed qd tree
+    :param block_size: the minimum size of a block.  The maximum size is twice the block size.
+    :return: a tree as a nested list
     """
+    top = False
+    output = []
     if node is None and root is None:
         node = Root(table)
         root = node
         prev_preds = []
+        top = True
+        rank_fn = rank_fn_gen(block_size)
     print("Generating subset...", end='\r')
-    subset = subset_gen(table, subset_size)
-    print("Generating preds...", end='\r')
-    preds = all_predicates(subset, table, columns=columns)
-    best_pred = preds[0]
-    top_score = 0
-    for pred in preds:
-        print("acting on pred:", pred, '                                 ', end='\r')
-        score = rank_fn(subset, table, workload, pred, prev_preds)
-        if score > top_score:
-            best_pred = pred
-            top_score = score
-    if top_score > 0:
-        print('Choosing the following predicate:')
-        print(best_pred)
-        print('')
-        child_right, child_left = root.split_leaf(node, best_pred)
-        workload_right, workload_left, _ = workload.split(best_pred)
-        tree_gen(child_right.table, workload_right, rank_fn, subset_size, child_right, root, prev_preds + [best_pred])
-        tree_gen(child_left.table, workload_left, rank_fn, subset_size, child_left, root, prev_preds + [best_pred.flip()])
-    if save:
-        with open('.'.join(table.path.split('.')[:-1]) + 'pickle', 'w') as file:
-            pickle.dump(root, file)
-    return root
+    valid_splits = False
+    while not valid_splits:
+        top_score = 0
+        if table.size > 2 * block_size:
+            subset = subset_gen(table, subset_size)
+            print("Generating preds...", end='\r')
+            preds = all_predicates(subset, table, columns=columns)
+            best_pred = preds[0]
+            print("Testing preds...", end='\r')
+            for pred in preds:
+                # if len(str(pred)) > 100:
+                #     print("acting on pred:", str(pred)[:100] + '                                 ', end='\r')
+                # else:
+                #     print("acting on pred:", pred, '                                 ', end='\r')
+                score = rank_fn(subset, table, workload, pred, prev_preds)
+                if score > top_score:
+                    best_pred = pred
+                    top_score = score
+        if top_score > 0:
+            print('Choosing the following predicate:', best_pred)
+            print('Splitting {} into {} and {}...'.format(table.name, table.name + '0', table.name + '1'), end='\r')
+            child_right, child_left = root.split_leaf(node, best_pred)
+            workload_right, workload_left, _ = workload.split(best_pred, prev_preds)
+            dict_right = tree_gen(child_right.table, workload_right, rank_fn, subset_size, child_right, root,
+                                  prev_preds + [best_pred], block_size=block_size)
+            dict_left = tree_gen(child_left.table, workload_left, rank_fn, subset_size, child_left, root,
+                                 prev_preds + [best_pred.flip()], block_size=block_size)
+            output.append(str(best_pred))
+            output += [dict_right, dict_left]
+            valid_splits = True
+        elif table.size > (2 * block_size):
+            print("Failed to split {} rows; minimum block size is {}  Trying again.".format(table.size, block_size))
+        else:
+            valid_splits = True
+            print("Leaving {} with {} rows".format(table.path, table.size))
+    if top:
+        print(output)
+        with open(table.folder + '/' + table.name + '.json', 'w') as file:
+            dump(output, file)
+    return output
+    # else:
+    #     return output
+    # if save:
+    #     with open('.'.join(table.path.split('.')[:-1]) + 'pickle', 'w') as file:
+    #         pickle.dump(root, file)
 
 
 def rank_fn_gen(min_size, multiply_sizes=False):
@@ -225,6 +253,68 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         if multiply_sizes:
             return len(workload)*len(data) - len(w_right)*len(d_right) - len(w_left)*len(d_left)
         else:
-            return len(workload) - len(w_both)
+            # We add 1 here to show it is better than an invalid split
+            return len(workload) - len(w_both) + 1
 
     return rank_fn
+
+
+def index(query, table_path, tree=None, verbose=False):
+    """
+    For a given query, recursively get the relevant files
+    :param query: a Query object
+    :param table_path: the path to a table
+    :param tree: a tree dictionary.  Only used for recursive calls
+    :param verbose: whether to print extra stuff, like which ones we're ignoring
+    :return: a list of the paths to relevant files in the qd_tree
+    """
+    split_path = table_path.split('.')
+    storage = split_path[-1]
+    path_s = '.'.join(split_path[:-1])
+    output = []
+    # print(path_s + '.json')
+
+    # Load things for the root
+    if tree is None:
+        with open(path_s + '.json', 'r') as file:
+            tree = load(file)
+    # if verbose:
+    #     print(tree)
+    #     print('')
+
+    # Base case
+    if len(tree) == 0:
+        output.append(path_s + '.' + storage)
+        return output
+
+    # Recursive cases
+
+    valid = False
+    pred = pred_gen(tree[0], query.table)
+    if intersect(query.list_preds() + [pred]):
+        output += index(Query(query.list_preds() + [pred], query.table), path_s + '0.' + storage, tree[1], verbose)
+        valid = True
+    elif verbose:
+        print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred]))
+
+    if intersect(query.list_preds() + [pred.flip()]):
+        output += index(Query(query.list_preds() + [pred.flip()], query.table), path_s + '1.' + storage, tree[2], verbose)
+        valid = True
+    elif verbose:
+        print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred.flip()]))
+
+    if not valid:
+        print(query.list_preds())
+        print(intersect(query.list_preds()))
+        print(query.list_preds() + [pred])
+        print(query.list_preds() + [pred.flip()])
+        raise Exception("Query matches neither predicate")
+
+    return output
+
+
+
+
+
+
+
