@@ -47,15 +47,15 @@ class Table:
                 self.size = size
         elif storage == 'parquet':
             data = ParquetFile(self.path)
-            columns = data.columns
+            # columns = data.columns
             self.size = data.count()
-            df = data.to_pandas()
-            self.categorical = {}
-            for c in columns:
-                if not self.columns[c].numerical:
-                    # this is a categorical column
-                    self.categorical[c] = set([str(i) for i in df[c]])
-            del data
+            # df = data.to_pandas()
+            # self.categorical = {}
+            # for c in columns:
+            #     if not self.columns[c].numerical:
+            #         # this is a categorical column
+            #         self.categorical[c] = set([str(i) for i in df[c]])
+            # del data
         else:
             raise Exception("Invalid storage.  Must be 'parquet' or 'csv'")
 
@@ -140,7 +140,8 @@ class Table:
         size = 0
         maxes = {}
         mins = {}
-        categorical = self.categorical.copy() # pre-make this for efficiency
+        # categorical = self.categorical.copy() # pre-make this for efficiency
+        categorical = {}
         numerical = {}
         if self.storage == 'parquet':
             data = ParquetFile(self.path)
@@ -162,7 +163,7 @@ class Table:
                         mins[col.num] = row_1[col.num]
                         numerical[col.num] = True
                     else:
-                        categorical[col.num] = {row_1[col.num]}
+                        # categorical[col.num] = {row_1[col.num]}
                         numerical[col.num] = False
                 for row in data:
                     size += 1
@@ -171,7 +172,8 @@ class Table:
                             maxes[i] = max(row[i], maxes[i])
                             mins[i] = min(row[i], mins[i])
                         else:
-                            categorical[i].add(row[i])
+                            pass
+                            # categorical[i].add(row[i])
         return categorical, mins, maxes
 
 

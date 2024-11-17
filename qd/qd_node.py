@@ -42,7 +42,7 @@ class Node:
                 min_pred = Numerical(Operator('>='), col, mins[cname])
                 self.preds[cname] = (min_pred, max_pred)
             else:
-                self.preds[cname] = (Categorical(Operator('IN'), col, cats[cname]),)
+                self.preds[cname] = (Categorical(Operator('!IN'), col, set()),)
         if not (root or split_pred):
             raise Exception("If this is not the root, a splitting predicate is required")
         self.split_pred = split_pred
@@ -70,10 +70,10 @@ class Node:
                 assert col_preds[0].num <= col_preds[1].num, "Contradictory constraints on column " + col.name
             else:
                 assert len(col_preds) == 1, "Numerical columns must have exactly 2 predicates"
-                assert col_preds[0].op.symbol == 'IN', "The first predicate for this column must be IN"
+                # assert col_preds[0].op.symbol == 'IN', "The first predicate for this column must be IN"
                 assert col_preds[0].column == col, "A predicate for column " + col_preds[0].column.name + "has been assigned to column" + col.name
                 assert 'values' in dir(col_preds[0]), "Predicate for this column must be categorical"
-                assert len(col_preds[0].values) > 0, "Impossible constraint on column " + col.name
+                # assert len(col_preds[0].values) > 0, "Impossible constraint on column " + col.name
         if recurse and self.is_split:
             self.child_right.check_inv(recurse=True)
             self.child_left.check_inv(recurse=True)
@@ -188,7 +188,7 @@ class Root(Node):
                 if col.numerical:
                     preds[name] = (Numerical(Operator('>='), col, mins[index]), Numerical(Operator('<='), col, maxes[index]))
                 else:
-                    preds[name] = (Categorical(Operator('IN'), col, categorical[index]),)
+                    preds[name] = (Categorical(Operator('!IN'), col, set()),)
             super().__init__(table, preds, root=True)
             self.leaves = {self.table.name: self}
 
