@@ -1,5 +1,5 @@
 import numpy as np
-from qd_table import tbl_to_parquet
+from qd.qd_table import tbl_to_parquet
 from fastparquet import ParquetFile, write
 import os
 # from pandas import StringDtype
