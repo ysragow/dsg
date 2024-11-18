@@ -197,29 +197,35 @@ def table_gen(path):
         numerical = True
         c_name = file.columns[i]
         c_np_type = file.dtypes[c_name]
-        if str(c_np_type) == 'object':
-            c_type = 'STRING'
-        elif c_np_type in (Int32Dtype, Int64Dtype):
-            print("Column {} is interpreted as type {} in table {}".format(c_name, c_np_type, t_name))
-            c_type = 'INTEGER'
-        elif np.issubdtype(c_np_type, int):
-            c_type = 'INTEGER'
-        elif np.issubdtype(c_np_type, np.number):
-            c_type = 'FLOAT'
-        elif np.issubdtype(c_np_type, np.datetime64):
-            c_type = 'DATE'
-        else:
-            c_type = 'STRING'
-            numerical = False
-        if numerical:
-            # Make a numerical column
-            cmax = max(file.statistics['max'][c_name])
-            cmin = min(file.statistics['min'][c_name])
-            columns[c_name] = Column(c_name, i, c_type, cmax=cmax, cmin=cmin)
-        else:
-            # Don't worry about the values - CatComparatives seem not to exist in TPC-H
-            # So just make a normal column for categoricals
-            columns[c_name] = Column(c_name, i, c_type)
+        try:
+            if str(c_np_type) == 'object':
+                c_type = 'STRING'
+            elif c_np_type in (Int32Dtype, Int64Dtype):
+                print("Column {} is interpreted as type {} in table {}".format(c_name, c_np_type, t_name))
+                c_type = 'INTEGER'
+            elif np.issubdtype(c_np_type, int):
+                c_type = 'INTEGER'
+            elif np.issubdtype(c_np_type, np.number):
+                c_type = 'FLOAT'
+            elif np.issubdtype(c_np_type, np.datetime64):
+                c_type = 'DATE'
+            else:
+                c_type = 'STRING'
+                numerical = False
+            if numerical:
+                # Make a numerical column
+                cmax = max(file.statistics['max'][c_name])
+                cmin = min(file.statistics['min'][c_name])
+                columns[c_name] = Column(c_name, i, c_type, cmax=cmax, cmin=cmin)
+            else:
+                # Don't worry about the values - CatComparatives seem not to exist in TPC-H
+                # So just make a normal column for categoricals
+                columns[c_name] = Column(c_name, i, c_type)
+        except Exception as e:
+            print("File path: ", path)
+            print("Column: ", c_name)
+            print("Type: {} ({}) ".format(c_np_type, c_np_type.__repr__()))
+            raise e
 
 
     # print(dict([(column.name, column.ctype) for column in columns.values()]))
