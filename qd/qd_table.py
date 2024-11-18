@@ -125,8 +125,14 @@ class Table:
             file_1.close()
         else:
             raise Exception("invalid storage format")
-        table1 = Table(self.name + '0', data_0_size, columns=columns, storage=self.storage, folder=self.folder)
-        table2 = Table(self.name + '1', data_1_size, columns=columns, storage=self.storage, folder=self.folder)
+        split_path = self.path.split('.')
+        path_s = '.'.join(split_path[:-1])
+        storage = split_path[-1]
+        table1 = table_gen(path_s + '0.' + storage)
+        table2 = table_gen(path_s + '1.' + storage)
+        print("Table 1 size:", table1.size)
+        print("Table 2 size:", table2.size)
+        print("Total table size:", self.size)
         return table1, table2
 
     def get_boundaries(self):
