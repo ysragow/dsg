@@ -1,7 +1,7 @@
 from qd.qd_column import Column
 from qd.qd_predicate import Predicate
 from fastparquet import ParquetFile, write as fp_write
-from pandas import read_table, to_datetime
+from pandas import read_table, to_datetime, Int32Dtype, Int64Dtype
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -197,7 +197,10 @@ def table_gen(path):
         numerical = True
         c_name = file.columns[i]
         c_np_type = file.dtypes[c_name]
-        if np.issubdtype(c_np_type, int):
+        if c_np_type in (Int32Dtype, Int64Dtype):
+            print("Column {} is interpreted as type {} in table {}".format(c_name, c_np_type, t_name))
+            c_type = 'INTEGER'
+        elif np.issubdtype(c_np_type, int):
             c_type = 'INTEGER'
         elif np.issubdtype(c_np_type, np.number):
             c_type = 'FLOAT'
