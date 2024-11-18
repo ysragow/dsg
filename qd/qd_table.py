@@ -197,9 +197,11 @@ def table_gen(path):
         numerical = True
         c_name = file.columns[i]
         c_np_type = file.dtypes[c_name]
-        if c_np_type in (Int32Dtype, Int64Dtype):
-            print("Column {} is interpreted as type {} in table {}".format(c_name, c_np_type, t_name))
-            c_type = 'INTEGER'
+        if str(c_np_type) == 'object':
+            c_type = 'STRING'
+        # elif c_np_type in (Int32Dtype, Int64Dtype):
+        #     print("Column {} is interpreted as type {} in table {}".format(c_name, c_np_type, t_name))
+        #     c_type = 'INTEGER'
         elif np.issubdtype(c_np_type, int):
             c_type = 'INTEGER'
         elif np.issubdtype(c_np_type, np.number):
