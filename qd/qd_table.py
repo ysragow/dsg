@@ -87,16 +87,18 @@ class Table:
         file_str = '{}/{}{}.{}'.format(self.folder, self.name, '{}', self.storage)
         columns = self.columns.copy()
         if self.storage == 'parquet':
-            data = ParquetFile(self.path)
-            if pred.comparative:
-                pd = data.to_pandas().reset_index(drop=True)
-                data_0 = pd[pred.op(pd[pred.column.name], pd[pred.col2.name])].reset_index(drop=True)
-                data_1 = pd[pred.op.flip()(pd[pred.column.name], pd[pred.col2.name])].reset_index(drop=True)
-            else:
-                data_0 = data.to_pandas(filters=[pred.to_dnf()], row_filter=True).reset_index(drop=True)
-                data_1 = data.to_pandas(filters=[pred.flip().to_dnf()], row_filter=True).reset_index(drop=True)
-            data_0 = pa.Table.from_pandas(data_0)
-            data_1 = pa.Table.from_pandas(data_1)
+            # data = ParquetFile(self.path)
+            # if pred.comparative:
+            #     pd = data.to_pandas().reset_index(drop=True)
+            #     data_0 = pd[pred.op(pd[pred.column.name], pd[pred.col2.name])].reset_index(drop=True)
+            #     data_1 = pd[pred.op.flip()(pd[pred.column.name], pd[pred.col2.name])].reset_index(drop=True)
+            # else:
+            #     data_0 = data.to_pandas(filters=[pred.to_dnf()], row_filter=True).reset_index(drop=True)
+            #     data_1 = data.to_pandas(filters=[pred.flip().to_dnf()], row_filter=True).reset_index(drop=True)
+            # data_0 = pa.Table.from_pandas(data_0)
+            # data_1 = pa.Table.from_pandas(data_1)
+            data_0 = pa.parquet.read_table(self.path, filters=pred.to_expression())
+            data_1 = pa.parquet.read_table(self.path, filters=pred.flip().to_expression())
             data_0_size = data_0.num_rows
             data_1_size = data_1.num_rows
             pa.parquet.write_table(data_0, file_str.format(0))
