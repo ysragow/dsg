@@ -199,7 +199,7 @@ def table_gen(path):
         c_np_type = file.dtypes[c_name]
         if str(c_np_type) == 'object':
             c_type = 'STRING'
-        elif str(c_np_type) in (Int32, Int64):
+        elif str(c_np_type) in ('Int32', 'Int64'):
             print("Column {} is interpreted as type {} in table {}".format(c_name, c_np_type, t_name))
             c_type = 'STRING'
         elif np.issubdtype(c_np_type, int):
