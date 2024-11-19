@@ -1,6 +1,7 @@
 from qd.qd_predicate import Predicate, Operator
 from qd.qd_column import Column
 from qd.qd_table import Table
+from pyarrow.compute import field, scalar
 from numpy import datetime64
 import json
 
@@ -37,6 +38,22 @@ class Categorical(Predicate):
         :return: predicate: the inverse of this predicate
         """
         return Categorical(self.op.flip(), self.column, self.values)
+
+    def to_expression(self):
+        """
+        :return: A parquet expression representing this predicate
+        """
+        if self.op.symbol == 'IN':
+            return field(self.column.name).isin(list(self.values))
+        else:
+            output = None
+            for value in list(self.values):
+                new_exp = (field(self.column.name) != scalar(value))
+                if output is None:
+                    output = new_exp
+                else:
+                    output &= new_exp
+            return output
 
 
 class Numerical(Predicate):
@@ -88,6 +105,12 @@ class Numerical(Predicate):
         :return: predicate: the inverse of this predicate
         """
         return Numerical(self.op.flip(), self.column, self.num)
+
+    def to_expression(self):
+        """
+        :return: A parquet expression representing this predicate
+        """
+        return self.op(field(self.column.name), scalar(self.num))
 
 
 class CatComparative(Predicate):
@@ -179,6 +202,12 @@ class NumComparative(Predicate):
 
     def flip(self, parent_pred=None):
         return NumComparative(self.op.flip(), self.column, self.col2)
+
+    def to_expression(self):
+        """
+        :return: A parquet expression representing this predicate
+        """
+        return self.op(field(self.column.name), field(self.col2.name))
 
 
 def intersect(preds):
