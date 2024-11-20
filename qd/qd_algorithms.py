@@ -290,6 +290,8 @@ def index(query, table_path, tree=None, verbose=False):
     # Recursive cases
 
     valid = False
+    if verbose:
+        print("Pred:", tree[0])
     pred = pred_gen(tree[0], query.table)
     if intersect(query.list_preds() + [pred]):
         output += index(Query(query.list_preds() + [pred], query.table), path_s + '0.' + storage, tree[1], verbose)
