@@ -14,6 +14,10 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
 
     if layout == 'qd':
         assert query_obj is not None, "A query object is required to index qd trees"
+        potential_files = glob(name + '/*.parquet')
+        assert len(potential_files) == 1, f"There should be exactly one parquet file in {name}"
+        table = table_gen(potential_files[0])
+        query_obj = reset(table, query_obj)
         root_file = None
         potential_files = glob(folder + '/*.json')
         if len(potential_files) == 0:
@@ -23,7 +27,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
                 pass
             else:
                 root_file = file
-        return qd_index(query_obj, root_file[:-4] + 'parquet', verbose=True)
+        return qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=True)
 
     num_partitions = int(folder.split('/')[-1])
 
@@ -78,10 +82,6 @@ def main():
         else:
             q_bottom = 0
             q_top = 0
-            potential_files = glob(name + '/*.parquet')
-            assert len(potential_files) == 1, f"There should be exactly one parquet file in {name}"
-            query_obj = reset(table_gen(potential_files[0]), query_obj)
-
 
         # Process args
         if len(argv) == 2:

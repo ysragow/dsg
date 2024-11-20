@@ -283,16 +283,17 @@ def reset(table, obj):
         raise Exception("Invalid object for resetting")
 
 
-def index(query, table_path, tree=None, verbose=False):
+def index(query, root_path, table, tree=None, verbose=False):
     """
     For a given query, recursively get the relevant files
     :param query: a Query object
-    :param table_path: the path to a table
+    :param root_path: the path to the root object, whether or not it actually exists
+    :param table: a table object
     :param tree: a tree dictionary.  Only used for recursive calls
     :param verbose: whether to print extra stuff, like which ones we're ignoring
     :return: a list of the paths to relevant files in the qd_tree
     """
-    split_path = table_path.split('.')
+    split_path = root_path.split('.')
     storage = split_path[-1]
     path_s = '.'.join(split_path[:-1])
     output = []
@@ -302,6 +303,7 @@ def index(query, table_path, tree=None, verbose=False):
     if tree is None:
         with open(path_s + '.json', 'r') as file:
             tree = load(file)
+        query = reset(table, query)
     # if verbose:
     #     print(tree)
     #     print('')
@@ -316,22 +318,20 @@ def index(query, table_path, tree=None, verbose=False):
     valid = False
     if verbose:
         print("Pred:", tree[0])
-    pred = pred_gen(tree[0], query.table)
+    pred = pred_gen(tree[0], table)
     if intersect(query.list_preds() + [pred]):
         # Make sure all column object being acted on are the same by resetting the preds
-        new_table_path = path_s + '0.' + storage
-        new_table = table_gen(new_table_path)
-        new_query = Query(list([reset(new_table, p) for p in query.list_preds() + [pred]]), new_table)
-        output += index(new_query, path_s + '0.' + storage, tree[1], verbose)
+        new_path = path_s + '0.' + storage
+        new_query = Query(query.list_preds() + [pred], table)
+        output += index(new_query, new_path, table, tree[1], verbose)
         valid = True
     elif verbose:
         print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred]))
 
     if intersect(query.list_preds() + [pred.flip()]):
-        new_table_path = path_s + '1.' + storage
-        new_table = table_gen(new_table_path)
-        new_query = Query(list([reset(new_table, p) for p in query.list_preds() + [pred.flip()]]), new_table)
-        output += index(new_query, path_s + '1.' + storage, tree[1], verbose)
+        new_path = path_s + '1.' + storage
+        new_query = Query(query.list_preds() + [pred.flip()], table)
+        output += index(new_query, new_path, table, tree[2], verbose)
         valid = True
     elif verbose:
         print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred.flip()]))
