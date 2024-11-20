@@ -23,7 +23,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
                 pass
             else:
                 root_file = file
-        return qd_index(query_obj, root_file[:-4] + 'parquet')
+        return qd_index(query_obj, root_file[:-4] + 'parquet', verbose=True)
 
     num_partitions = int(folder.split('/')[-1])
 
