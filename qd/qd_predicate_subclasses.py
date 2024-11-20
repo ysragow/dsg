@@ -503,6 +503,8 @@ def num_intersect(preds, debug=False):
                         prev = index[cname]
                         root = index[cname]
             if not all_e:
+                if debug:
+                    print("A cycle was found, and it did not consist entirely of less than or equals")
                 return False
             for node in cycle_nodes:
                 root.combine(node, debug)
@@ -520,8 +522,12 @@ def num_intersect(preds, debug=False):
     for col in index.keys():
         c = index[col]
         if c.min > c.max:
+            if debug:
+                print(f"Column {col} is constrained to have a max of {c.max} and a min of {c.min}")
             return False
         if (c.min == c.max) and not (c.min_e and c.max_e):
+            if debug:
+                print(f"Column {col} is constrained to have a max of {c.max} and a min of {c.min}")
             return False
     return True
 
