@@ -330,7 +330,7 @@ def index(query, table_path, tree=None, verbose=False):
     if intersect(query.list_preds() + [pred.flip()]):
         new_table_path = path_s + '1.' + storage
         new_table = table_gen(new_table_path)
-        new_query = Query(list([reset(p, new_table) for p in query.list_preds() + [pred.flip()]]), new_table)
+        new_query = Query(list([reset(new_table, p) for p in query.list_preds() + [pred.flip()]]), new_table)
         output += index(new_query, path_s + '1.' + storage, tree[1], verbose)
         valid = True
     elif verbose:
