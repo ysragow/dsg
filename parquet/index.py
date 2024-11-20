@@ -15,12 +15,15 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
     if layout == 'qd':
         assert query_obj is not None, "A query object is required to index qd trees"
         root_file = None
-        for file in glob(folder + '/*.json'):
+        potential_files = glob(folder + '/*.json')
+        if len(potential_files) == 0:
+            raise Exception("The folder " + folder + "does not have any jsons in it")
+        for file in potential_files:
             if root_file != folder + '/files.json':
                 pass
             else:
                 root_file = file
-        return qd_index(query_obj, "{}/{}.parquet".format(folder, root_file[:-5]))
+        return qd_index(query_obj, root_file[:-4] + 'parquet')
 
     num_partitions = int(folder.split('/')[-1])
 
