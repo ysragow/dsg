@@ -69,8 +69,12 @@ def main():
         print(query)
         print(query_obj)
         q_files = {}
-        q_bottom = query[0][2]
-        q_top = query[1][2]
+        if layout in ("rgm", "index"):
+            q_bottom = query[0][2]
+            q_top = query[1][2]
+        else:
+            q_bottom = 0
+            q_top = 0
 
         # Process args
         if len(argv) == 2:
