@@ -273,11 +273,12 @@ class ColumnNode:
     """
     Turns a column into a column node
     """
-    def __init__(self, c, col_index):
+    def __init__(self, c, col_index, debug=False):
         """
         Take a column and turn it into a column node
         :param c: A column
         :param col_index: A dictionary mapping all column names to their column nodes
+        :param debug: Whether to print the mins and max of the column
         NOTE: col_index IS SHARED AMONG ALL COLUMN NODES
         """
         self.col_index = col_index
@@ -304,6 +305,9 @@ class ColumnNode:
         self.max_e = True
         self.min = c.min
         self.min_e = True
+        if debug:
+            print(f"Max for column {c.name}: {c.max}")
+            print(f"Min for column {c.name}: {c.min}")
         self.columns = [c.name]
         self.name = c.name
         self.col_set = {c.name}
@@ -411,10 +415,10 @@ def num_intersect(preds, debug=False):
     # Hopefully the code should be good enough that the order of adding nodes here doesn't matter
     for pred in preds:
         if pred.column.name not in index:
-            index[pred.column.name] = ColumnNode(pred.column, index)
+            index[pred.column.name] = ColumnNode(pred.column, index, debug)
         if pred.comparative:
             if pred.col2.name not in index:
-                index[pred.col2.name] = ColumnNode(pred.col2, index)
+                index[pred.col2.name] = ColumnNode(pred.col2, index, debug)
             if pred.op.symbol == '=':
                 if not index[pred.column.name].combine(index[pred.col2.name], debug):
                     return False
