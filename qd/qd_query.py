@@ -8,7 +8,8 @@ from qd.qd_predicate_subclasses import (
     pred_gen,
     intersect,
 )
-from qd.qd_table import Table
+from qd.qd_table import Table, table_gen
+from glob import glob
 
 
 class Query:
@@ -26,6 +27,39 @@ class Query:
             self.predicates[predicate.column.name].append(predicate)
             # if predicate.comparative:
             #     self.predicates[predicate.col2.name].append(predicate)
+
+    # def intersect(self, other):
+    #     """
+    #     Check if two queries intersect each other
+    #     :param other: another query
+    #     :return: whether the queries intersect
+    #     """
+    #     # Get boundaries for each column
+    #     _, mins, maxes = self.table.get_boundaries()
+    #
+    #     # Dict for whether they are [ (True) or ( (False) boundaries
+    #     emax = dict([(c, True) for c in mins.keys()])
+    #     emin = dict([(c, True) for c in mins.keys()])
+    #
+    #     all_preds = self.list_preds() + other.list_preds()
+    #
+    #     for pred in all_preds:
+    #         # Don't worry about CatComparatives here
+    #         if pred.categorical:
+    #             # Comparative
+    #             if pred.column.numerical:
+    #                 # NumComparative
+    #                 if pred.op.symbol == "=":
+    #                     # Deal with this case
+    #                     pass
+    #                 else:
+    #                     # Everything else
+    #                     equal = pred.op.symbol in ("<=", ">=")
+    #                     is_bigger = pred.op.symbol in (">=", ">")
+    #
+    #             else:
+    #                 # CatComparitive
+    #                 assert False, "No CatComparatives"
 
     def list_preds(self):
         """
@@ -108,4 +142,19 @@ class Workload:
                 raise Exception("Something is wrong with predicate check")
 
         return Workload(right_queries), Workload(left_queries), Workload(straddlers)
+
+
+def q_gen_const(path):
+    """
+    Generates a query object constructor given a path (to a folder, or to a parquet file)
+    :param path: A path to a folder containing parquet files or to a parquet file
+    :return: A function which takes in lists of predicates strings and outputs a query
+    """
+    if path[-8:] == '.parquet':
+        table = table_gen(path)
+    else:
+        p_paths = glob(path + '*.parquet')
+        assert len(p_paths) > 0, path + " is not a parquet file or a folder containing parquet files"
+        table = table_gen(p_paths[0])
+    return lambda strs: Query([pred_gen(s, table) for s in strs], table)
 

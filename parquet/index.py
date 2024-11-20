@@ -1,12 +1,27 @@
-from params import queries, name, partitions, row_groups
+from params import queries, query_objects, name, partitions, layout
 from time import time
 from json import load, dump
 from os import listdir
+from qd.qd_algorithms import index as qd_index
 from sys import argv
+from glob import glob
 
 
-def index(folder, query_bottom, query_top, timestamps=False):
+def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
     start_time = time()
+
+    assert layout in ("rgm", "qd", "index"), "Invalid layout"
+
+    if layout == 'qd':
+        assert query_obj is not None, "A query object is required to index qd trees"
+        root_file = None
+        for file in glob(folder + '/*.json'):
+            if root_file != folder + '/files.json':
+                pass
+            else:
+                root_file = file
+        return qd_index(query_obj, "{}/{}.parquet".format(folder, root_file[:-5]))
+
     num_partitions = int(folder.split('/')[-1])
 
     # Binary search for smallest start less than or equal to bottom
@@ -26,9 +41,10 @@ def index(folder, query_bottom, query_top, timestamps=False):
     output = []
     while starts[i] < query_top:
         name_to_index = '{}/{}'.format(folder, starts[i])
-        if row_groups == 'optimize':
+        if layout == 'rgm':
+            # Row group mixing:
             output += ['{}/{}'.format(name_to_index, pfile) for pfile in listdir(name_to_index)]
-        else:
+        elif layout == 'index':
             output.append(name_to_index + '.parquet')
         i += 1
         if i == len(starts):
@@ -47,7 +63,9 @@ def index(folder, query_bottom, query_top, timestamps=False):
 def main():
     all_files = []
     local_name = name
-    for query in queries:
+    for i in range(len(queries)):
+        query = queries[i]
+        query_obj = query_objects[i]
         q_files = {}
         q_bottom = query[0][2]
         q_top = query[1][2]
@@ -65,7 +83,7 @@ def main():
         # Index
         for partition_count in partitions:
             f = '{}/{}'.format(local_name, partition_count)
-            q_files[partition_count] = index(f, q_bottom, q_top, timestamps=True)
+            q_files[partition_count] = index(f, q_bottom, q_top, timestamps=True, query_obj=query_obj)
         all_files.append(q_files)
 
     # Put data into files

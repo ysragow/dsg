@@ -1,5 +1,6 @@
 from warnings import filterwarnings
 from params import name, partitions, verbosity_2, timestamps, processes, queries, query_types, scan
+from metaparams import read
 from parallel import parallel_read, pooled_read, regular_read
 from json import load, dump
 import os
@@ -125,7 +126,7 @@ def main(verbosity=False):
     # overall_dict = {'regular': regular_dict, 'pooled': pooled_dict, 'parallel': parallel_dict}
     with open(name + '/query_times.json', 'w') as file:
         dump(overall_dict, file)
-    bandwidth(name)
+    # bandwidth(name)
 
 
 if __name__ == '__main__':
