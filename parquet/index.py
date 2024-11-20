@@ -66,6 +66,8 @@ def main():
     for i in range(len(queries)):
         query = queries[i]
         query_obj = query_objects[i]
+        print(query)
+        print(query_obj)
         q_files = {}
         q_bottom = query[0][2]
         q_top = query[1][2]
