@@ -306,10 +306,17 @@ def index(query, table_path, tree=None, verbose=False):
         print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred.flip()]))
 
     if not valid:
-        print(query.list_preds())
-        print(intersect(query.list_preds()))
-        print(query.list_preds() + [pred])
-        print(query.list_preds() + [pred.flip()])
+        print("WARNING: INVALID QUERY / PRED COMBINATION")
+        if not intersect(query.list_preds()):
+            print("")
+            print("The following query does not intersect itself:")
+            print(query)
+        else:
+            print("")
+            print("Pred:" , pred)
+            print("Query:", query)
+            print("Right preds:", query.list_preds() + [pred])
+            print("Left preds:", query.list_preds() + [pred.flip()])
         raise Exception("Query matches neither predicate")
 
     return output
