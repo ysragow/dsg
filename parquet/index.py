@@ -2,7 +2,7 @@ from params import queries, query_objects, name, partitions, layout
 from time import time
 from json import load, dump
 from os import listdir
-from qd.qd_algorithms import index as qd_index
+from qd.qd_algorithms import index as qd_index, table_gen, reset
 from sys import argv
 from glob import glob
 
@@ -78,6 +78,10 @@ def main():
         else:
             q_bottom = 0
             q_top = 0
+            potential_files = glob(name + '/*.parquet')
+            assert len(potential_files) == 1, f"There should be exactly one parquet file in {name}"
+            query_obj = reset(table_gen(potential_files[0]), query_obj)
+
 
         # Process args
         if len(argv) == 2:
