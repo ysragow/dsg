@@ -210,7 +210,7 @@ class NumComparative(Predicate):
         return self.op(field(self.column.name), field(self.col2.name))
 
 
-def intersect(preds):
+def intersect(preds, debug=False):
     date_preds = []
     num_preds = []
     cat_preds = []
@@ -222,13 +222,18 @@ def intersect(preds):
                 num_preds.append(pred)
         else:
             cat_preds.append(pred)
+    if debug:
+        print("Categoricals:", cat_intersect(cat_preds, debug))
+        print("Dates:", cat_intersect(date_preds, debug))
+        print("Numbers:", cat_intersect(num_preds, debug))
     return cat_intersect(cat_preds) & num_intersect(date_preds) & num_intersect(num_preds)
 
 
-def cat_intersect(preds):
+def cat_intersect(preds, debug=False):
     """
     Checks whether a list of categorical predicates can all be satisfied
     :param preds: A list of numeric predicates
+    :param debug: Whether to print anything causing a falsehood
     :return: Whether there exists a point where they intersect
     """
     # No cat comparatives, so no need for an index
@@ -258,6 +263,8 @@ def cat_intersect(preds):
                 if value in col_sets[column]:
                     col_sets[column].remove(value)
         if len(col_sets[column]) == 0:
+            if debug:
+                print(f"Column {column} cannot take on any value")
             return False
     return True
 
@@ -301,7 +308,7 @@ class ColumnNode:
         self.name = c.name
         self.col_set = {c.name}
 
-    def combine(self, other):
+    def combine(self, other, debug=False):
         # Merge two ColumnNodes.  Return False if it raises a contradiction, else return True
         self.type |= other.type
 
@@ -390,10 +397,11 @@ class ColumnNode:
                     del node.smaller[col]
 
 
-def num_intersect(preds):
+def num_intersect(preds, debug=False):
     """
     Checks whether a list of numeric predicates can all be satisfied
     :param preds: A list of numeric predicates
+    :param debug: Whether to be in debug mode (additional print statements)
     :return: Whether there exists a point where they intersect
     """
     # This index keeps track of which column names point to which node objects
@@ -408,7 +416,7 @@ def num_intersect(preds):
             if pred.col2.name not in index:
                 index[pred.col2.name] = ColumnNode(pred.col2, index)
             if pred.op.symbol == '=':
-                if not index[pred.column.name].combine(index[pred.col2.name]):
+                if not index[pred.column.name].combine(index[pred.col2.name], debug):
                     return False
             else:
                 e = pred.op.symbol in ('<=', '>=')
@@ -497,7 +505,7 @@ def num_intersect(preds):
             if not all_e:
                 return False
             for node in cycle_nodes:
-                root.combine(node)
+                root.combine(node, debug)
                 active_set.remove(node.name)
 
             # Look for zeroes again
