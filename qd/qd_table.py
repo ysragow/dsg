@@ -14,7 +14,7 @@ class Table:
     Represents a table in a database
     IMMUTABLE
     """
-    def __init__(self, tname, size=None, columns=None, storage='parquet', folder='.'):
+    def __init__(self, tname, size=None, columns=None, storage='parquet', folder='.', child_folder=None):
         """
         :param tname: name of the table.  does not include .csv
         :param size: number of rows
@@ -27,6 +27,10 @@ class Table:
         self.path = folder + '/' + tname + '.' + storage
         self.columns = {}
         self.storage = storage
+        if child_folder is None:
+            self.child_folder = folder
+        else:
+            self.child_folder = child_folder
         if 'get' in dir(columns):
             # this means that columns is a dict or OrderedDict
             self.columns = columns
@@ -84,7 +88,7 @@ class Table:
         return self.column_list.copy()
 
     def split(self, pred):
-        file_str = '{}/{}{}.{}'.format(self.folder, self.name, '{}', self.storage)
+        file_str = '{}/{}{}.{}'.format(self.child_folder, self.name, '{}', self.storage)
         columns = self.columns.copy()
         if self.storage == 'parquet':
             # data = ParquetFile(self.path)
@@ -185,10 +189,11 @@ class Table:
         return categorical, mins, maxes
 
 
-def table_gen(path):
+def table_gen(path, child_folder=None):
     """
     Makes a table object from a path to a parquet file
     :param path: a path to a parquet file
+    :param child_folder: the path to the folder containing the children of this table
     :return: a table object
     """
     file = ParquetFile(path)
@@ -228,7 +233,7 @@ def table_gen(path):
         # raise e
 
     # print(dict([(column.name, column.ctype) for column in columns.values()]))
-    output = Table(t_name, columns=columns, storage='parquet', folder='/'.join(split_path[:-1]))
+    output = Table(t_name, columns=columns, storage='parquet', folder='/'.join(split_path[:-1]), child_folder=child_folder)
     # print(dict([(column.name, column.ctype) for column in columns.values()]))
     return output
 
