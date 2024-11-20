@@ -19,7 +19,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         if len(potential_files) == 0:
             raise Exception("The folder " + folder + "does not have any jsons in it")
         for file in potential_files:
-            if root_file == folder + '/files.json':
+            if root_file[-11:] == '/files.json':
                 pass
             else:
                 root_file = file
