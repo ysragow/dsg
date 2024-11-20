@@ -224,8 +224,8 @@ def intersect(preds, debug=False):
             cat_preds.append(pred)
     if debug:
         print("Categoricals:", cat_intersect(cat_preds, debug))
-        print("Dates:", cat_intersect(date_preds, debug))
-        print("Numbers:", cat_intersect(num_preds, debug))
+        print("Dates:", num_intersect(date_preds, debug))
+        print("Numbers:", num_intersect(num_preds, debug))
     return cat_intersect(cat_preds) & num_intersect(date_preds) & num_intersect(num_preds)
 
 
