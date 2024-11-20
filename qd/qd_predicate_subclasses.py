@@ -564,9 +564,15 @@ def pred_gen(pred_string, table):
         num = datetime64(value_name)
         assert column.numerical, "This is not a numerical column, so it cannot be compared with a number"
         return Numerical(op, column, num)
-    elif (value_name[0] == '(') and (value_name[-1] == ')'):
+    elif ((value_name[0] == '(') and (value_name[-1] == ')')) or ((value_name[0] == '{') and (value_name[-1] == '}')):
         # Instance of a categorical predicate
-        values = set(value_name[1:-1].replace(', ', ',').split(','))
+        values_list = value_name[1:-1].replace(', ', ',').split(',')
+        values = set()
+        for v in values_list:
+            if v[0] == v[-1] == "'":
+                values.add(v[1:-1])
+            else:
+                values.add(v)
         return Categorical(op, column, values)
     elif (op.symbol == '=') and (value_name[0] == "'") and (value_name[-1] == "'"):
         values = set()

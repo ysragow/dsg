@@ -143,18 +143,3 @@ class Workload:
 
         return Workload(right_queries), Workload(left_queries), Workload(straddlers)
 
-
-def q_gen_const(path):
-    """
-    Generates a query object constructor given a path (to a folder, or to a parquet file)
-    :param path: A path to a folder containing parquet files or to a parquet file
-    :return: A function which takes in lists of predicates strings and outputs a query
-    """
-    if path[-8:] == '.parquet':
-        table = table_gen(path)
-    else:
-        p_paths = glob(path + '*.parquet')
-        assert len(p_paths) > 0, path + " is not a parquet file or a folder containing parquet files"
-        table = table_gen(p_paths[0])
-    return lambda strs: Query([pred_gen(s, table) for s in strs], table)
-

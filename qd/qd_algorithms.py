@@ -1,9 +1,9 @@
 from qd.qd_query import Query, Workload
 from qd.qd_node import Node, Root
 from qd.qd_column import Column
-from qd.qd_table import Table
+from qd.qd_table import Table, table_gen
 from qd.qd_predicate import Operator
-from qd.qd_predicate_subclasses import pred_gen, Numerical, NumComparative, Categorical, intersect
+from qd.qd_predicate_subclasses import pred_gen, Numerical, NumComparative, Categorical, CatComparative, intersect
 from fastparquet import ParquetFile
 import numpy as np
 from json import dump, load, loads
@@ -169,6 +169,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
     """
     top = False
     output = []
+    workload = reset(table, workload)
     if node is None and root is None:
         node = Root(table)
         root = node
@@ -259,6 +260,29 @@ def rank_fn_gen(min_size, multiply_sizes=False):
     return rank_fn
 
 
+def reset(table, obj):
+    """
+    Reset an object to match a table
+    :param table: A Table object
+    :param obj: A predicate, column, query, or workload
+    :return: The object with this table set as its table
+    """
+    if 'ctype' in dir(obj):
+        # This is a column
+        return table.get_column(obj.name)
+    elif 'op' in dir(obj):
+        # This is a predicate
+        return pred_gen(str(obj), table)
+    elif 'predicates' in dir(obj):
+        # This is a query
+        return Query(list([reset(table, p) for p in obj.list_preds()]), table)
+    elif 'queries' in dir(obj):
+        # This is a workload
+        return Workload(list([reset(table, q) for q in obj.queries]))
+    else:
+        raise Exception("Invalid object for resetting")
+
+
 def index(query, table_path, tree=None, verbose=False):
     """
     For a given query, recursively get the relevant files
@@ -294,13 +318,20 @@ def index(query, table_path, tree=None, verbose=False):
         print("Pred:", tree[0])
     pred = pred_gen(tree[0], query.table)
     if intersect(query.list_preds() + [pred]):
-        output += index(Query(query.list_preds() + [pred], query.table), path_s + '0.' + storage, tree[1], verbose)
+        # Make sure all column object being acted on are the same by resetting the preds
+        new_table_path = path_s + '0.' + storage
+        new_table = table_gen(new_table_path)
+        new_query = Query(list([reset(p, new_table) for p in query.list_preds() + [pred]]), new_table)
+        output += index(new_query, path_s + '0.' + storage, tree[1], verbose)
         valid = True
     elif verbose:
         print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred]))
 
     if intersect(query.list_preds() + [pred.flip()]):
-        output += index(Query(query.list_preds() + [pred.flip()], query.table), path_s + '1.' + storage, tree[2], verbose)
+        new_table_path = path_s + '1.' + storage
+        new_table = table_gen(new_table_path)
+        new_query = Query(list([reset(p, new_table) for p in query.list_preds() + [pred.flip()]]), new_table)
+        output += index(new_query, path_s + '1.' + storage, tree[1], verbose)
         valid = True
     elif verbose:
         print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred.flip()]))
@@ -313,13 +344,28 @@ def index(query, table_path, tree=None, verbose=False):
             print(query)
         else:
             print("")
-            print("Pred:" , pred)
+            print("Pred:", pred)
             print("Query:", query)
             print("Right preds:", query.list_preds() + [pred])
             print("Left preds:", query.list_preds() + [pred.flip()])
         raise Exception("Query matches neither predicate")
 
     return output
+
+
+def q_gen_const(path):
+    """
+    Generates a query object constructor given a path (to a folder, or to a parquet file)
+    :param path: A path to a folder containing parquet files or to a parquet file
+    :return: A function which takes in lists of predicates strings and outputs a query
+    """
+    if path[-8:] == '.parquet':
+        table = table_gen(path)
+    else:
+        p_paths = glob(path + '*.parquet')
+        assert len(p_paths) > 0, path + " is not a parquet file or a folder containing parquet files"
+        table = table_gen(p_paths[0])
+    return lambda strs: Query([pred_gen(s, table) for s in strs], table)
 
 
 
