@@ -114,7 +114,7 @@ class Numerical(Predicate):
         if self.column.ctype != 'DATE':
             return self.op(field(self.column.name), scalar(self.num))
         else:
-            return self.op(field(self.column.name), pa_scalar(self.num, type=timestamp('s')))
+            return self.op(field(self.column.name), pa_scalar(datetime64(self.num), type=timestamp('s')))
 
 
 class CatComparative(Predicate):
