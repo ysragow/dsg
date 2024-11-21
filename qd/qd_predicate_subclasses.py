@@ -115,7 +115,7 @@ class Numerical(Predicate):
             return self.op(field(self.column.name), scalar(self.num))
         else:
             print(self.num)
-            return self.op(field(self.column.name), pa_scalar(datetime64(self.num), type=timestamp('s')))
+            return self.op(field(self.column.name), pa_scalar(datetime64(str(self.num)), type=timestamp('s')))
 
 
 class CatComparative(Predicate):
