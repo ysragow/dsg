@@ -1,5 +1,5 @@
 from warnings import filterwarnings
-from params import name, partitions, verbosity_2, timestamps, processes, queries, query_types, scan
+from params import name, partitions, verbosity_2, timestamps, processes, queries, query_objects, query_types, scan
 from metaparams import read
 from parallel import parallel_read, pooled_read, regular_read
 from json import load, dump
@@ -29,7 +29,8 @@ def run_all(f, files, args, kwargs, drop=False):
     """
     total = 0
     for j in range(len(queries)):
-        q = [queries[j]]
+        q_obj = query_objects[j]
+        q = [queries[j]] if (read == 'fastparquet') else [[p.to_expression() for p in q_obj.list_preds()]]
         query_files = files[j]
         # print(f.__repr__().split(' ')[1] + ' with args ' + str([q, query_files] + args) + 'and kwargs ' + str(kwargs))
         total += f(q, query_files, *args, **kwargs)
