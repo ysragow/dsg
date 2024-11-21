@@ -2,7 +2,7 @@ from qd.qd_predicate import Predicate, Operator
 from qd.qd_column import Column
 from qd.qd_table import Table
 from pyarrow.compute import field, scalar
-from pyarrow import timestamp
+from pyarrow import timestamp, scalar as pa_scalar
 from numpy import datetime64
 import json
 
@@ -114,7 +114,7 @@ class Numerical(Predicate):
         if self.column.ctype != 'DATE':
             return self.op(field(self.column.name), scalar(self.num))
         else:
-            return self.op(field(self.column.name), scalar(self.num, type=timestamp('s')))
+            return self.op(field(self.column.name), pa_scalar(self.num, type=timestamp('s')))
 
 
 class CatComparative(Predicate):
