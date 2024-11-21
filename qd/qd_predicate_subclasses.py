@@ -115,7 +115,10 @@ class Numerical(Predicate):
             return self.op(field(self.column.name), scalar(self.num))
         else:
             print(self.num)
-            return self.op(field(self.column.name), pa_scalar(datetime64(str(self.num)), type=timestamp('s')))
+            num_str = str(self.num)
+            if len(num_str) == 10:
+                num_str += ' 00:00:00'
+            return self.op(field(self.column.name), pa_scalar(datetime64(num_str), type=timestamp('s')))
 
 
 class CatComparative(Predicate):
