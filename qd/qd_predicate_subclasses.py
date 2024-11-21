@@ -110,7 +110,10 @@ class Numerical(Predicate):
         """
         :return: A parquet expression representing this predicate
         """
-        return self.op(field(self.column.name), scalar(self.num))
+        if self.column.ctype != 'DATE':
+            return self.op(field(self.column.name), scalar(self.num))
+        else:
+            return self.op(field(self.column.name), self.num)
 
 
 class CatComparative(Predicate):
