@@ -40,7 +40,7 @@ def run_all(f, files, args, kwargs, drop=False):
                 date_str = str(dnf[2])
                 if len(date_str) == 10:
                     date_str += ' 00:00:00'
-                q.append(dnf[0], dnf[1], datetime64(date_str).astype('int') * 10**9)
+                q.append((dnf[0], dnf[1], datetime64(date_str).astype('int') * 10**9))
         print("Filters:", q)
         q = [q]
         query_files = files[j]
