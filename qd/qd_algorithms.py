@@ -360,6 +360,8 @@ def q_gen_const(path):
     :param path: A path to a folder containing parquet files or to a parquet file
     :return: A function which takes in lists of predicates strings and outputs a query
     """
+    from os import getcwd
+    print("Working directory:", getcwd())
     if path[-8:] == '.parquet':
         table = table_gen(path)
     else:
