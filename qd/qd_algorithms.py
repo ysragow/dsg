@@ -7,6 +7,7 @@ from qd.qd_predicate_subclasses import pred_gen, Numerical, NumComparative, Cate
 from fastparquet import ParquetFile
 import numpy as np
 from json import dump, load, loads
+from glob import glob
 import pickle
 import csv
 import os
