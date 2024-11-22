@@ -3,6 +3,7 @@ from params import name, partitions, verbosity_2, timestamps, processes, queries
 from metaparams import read
 from parallel import parallel_read, pooled_read, regular_read
 from json import load, dump
+from numpy import datetime64
 import os
 import subprocess
 from sys import argv
@@ -33,7 +34,7 @@ def run_all(f, files, args, kwargs, drop=False):
         print(queries[j])
         # Eliminate the non-numerical predicates
         for dnf in queries[j]:
-            if type(dnf[2]) in (float, int):
+            if (type(dnf[2]) in (float, int)) or (type(dnf[2]) == datetime64):
                 q.append(dnf)
         print("Filters:", q)
         q = [q]
