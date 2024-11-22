@@ -258,6 +258,8 @@ def regular_read(filters, files, scan=False, timestamps=False, verbose=False):
     if verbose:
         num_rows = output if scan else output.shape[0]
         print("Regular Read scanned {} rows in {} seconds".format(num_rows, end_time - start_time))
+        if num_rows == 0:
+            print(f"WARNING: 0 rows detected on query with filters {filters} scanning files {files}.")
     if timestamps:
         return end_time - start_time
     return output
