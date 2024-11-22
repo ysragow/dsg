@@ -34,6 +34,7 @@ def run_all(f, files, args, kwargs, drop=False):
         for dnf in queries[j]:
             if type(dnf[2]) in (float, int):
                 q.append(dnf)
+        print("Filters:", q)
         q = [q]
         query_files = files[j]
         # print(f.__repr__().split(' ')[1] + ' with args ' + str([q, query_files] + args) + 'and kwargs ' + str(kwargs))
