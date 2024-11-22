@@ -33,7 +33,6 @@ def run_all(f, files, args, kwargs, drop=False):
     total = 0
     for j in range(len(queries)):
         q = []
-        print(queries[j])
         # Eliminate the non-numerical predicates
         for dnf in queries[j]:
             if type(dnf[2]) in (float, int):
@@ -44,7 +43,6 @@ def run_all(f, files, args, kwargs, drop=False):
                 if len(date_str) != 10:
                     arg_2 += ' %H:%M:%S'
                 q.append((dnf[0], dnf[1], scalar(datetime.strptime(date_str, arg_2))))
-        print("Filters:", q)
         q = [q]
         query_files = files[j]
         # print(f.__repr__().split(' ')[1] + ' with args ' + str([q, query_files] + args) + 'and kwargs ' + str(kwargs))
