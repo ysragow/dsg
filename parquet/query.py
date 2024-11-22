@@ -30,6 +30,7 @@ def run_all(f, files, args, kwargs, drop=False):
     total = 0
     for j in range(len(queries)):
         q = []
+        print(queries[j])
         # Eliminate the non-numerical predicates
         for dnf in queries[j]:
             if type(dnf[2]) in (float, int):
