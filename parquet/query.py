@@ -4,6 +4,8 @@ from metaparams import read
 from parallel import parallel_read, pooled_read, regular_read
 from json import load, dump
 from numpy import datetime64
+from pyarrow import scalar
+from datetime import datetime
 import os
 import subprocess
 from sys import argv
@@ -38,9 +40,10 @@ def run_all(f, files, args, kwargs, drop=False):
                 q.append(dnf)
             elif type(dnf[2]) == datetime64:
                 date_str = str(dnf[2])
-                if len(date_str) == 10:
-                    date_str += ' 00:00:00'
-                q.append((dnf[0], dnf[1], datetime64(date_str).astype('int') * 10**9))
+                arg_2 = '%Y-%m-%d'
+                if len(date_str) != 10:
+                    arg_2 += ' %H:%M:%S'
+                q.append((dnf[0], dnf[1], scalar(datetime.strptime(date_str, arg_2)))
         print("Filters:", q)
         q = [q]
         query_files = files[j]
