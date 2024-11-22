@@ -8,7 +8,6 @@ from qd.qd_predicate_subclasses import (
     pred_gen,
     intersect,
 )
-from qd.qd_table import Table, table_gen
 from glob import glob
 
 

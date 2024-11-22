@@ -29,8 +29,12 @@ def run_all(f, files, args, kwargs, drop=False):
     """
     total = 0
     for j in range(len(queries)):
-        q_obj = query_objects[j]
-        q = [queries[j]] if (read == 'fastparquet') else [[p.to_expression() for p in q_obj.list_preds()]]
+        q = []
+        # Eliminate the non-numerical predicates
+        for dnf in queries[j]:
+            if type(dnf[2]) in (float, int):
+                q.append(dnf)
+        q = [q]
         query_files = files[j]
         # print(f.__repr__().split(' ')[1] + ' with args ' + str([q, query_files] + args) + 'and kwargs ' + str(kwargs))
         total += f(q, query_files, *args, **kwargs)
