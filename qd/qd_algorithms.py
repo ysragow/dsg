@@ -96,7 +96,10 @@ def all_predicates(data, table, columns=None):
     :return: a list of all linear predicates separating this datapoints
     """
     predicates = []
-    columns = table.list_columns()
+
+    # If no columns are given to predicate on, then allow for predicating on all columns
+    if columns is None:
+        columns = table.list_columns()
     if type(data) == list:
         # the data is a list
         for row in data:
