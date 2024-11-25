@@ -131,11 +131,13 @@ class Table:
             file_1.close()
         else:
             raise Exception("invalid storage format")
-        split_path = self.path.split('.')
-        path_s = '.'.join(split_path[:-1])
-        storage = split_path[-1]
-        table1 = table_gen(path_s + '0.' + storage)
-        table2 = table_gen(path_s + '1.' + storage)
+        # split_path = self.path.split('.')
+        # path_s = '.'.join(split_path[:-1])
+        # storage = split_path[-1]
+        # table1 = table_gen(path_s + '0.' + storage)
+        # table2 = table_gen(path_s + '1.' + storage)
+        table1 = table_gen(file_str.format(0))
+        table2 = table_gen(file_str.format(1))
         print("Table 1 size:", table1.size)
         print("Table 2 size:", table2.size)
         print("Total table size:", self.size)
