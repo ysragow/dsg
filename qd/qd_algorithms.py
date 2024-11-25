@@ -173,13 +173,13 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
     """
     top = False
     output = []
-    workload = reset(table, workload)
     if node is None and root is None:
         node = Root(table)
         root = node
         prev_preds = []
         top = True
         rank_fn = rank_fn_gen(block_size)
+        workload = reset(table, workload)
     print("Generating subset...", end='\r')
     valid_splits = False
     while not valid_splits:
@@ -187,7 +187,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
         if table.size > 2 * block_size:
             subset = subset_gen(table, subset_size)
             print("Generating preds...", end='\r')
-            preds = all_predicates(subset, table, columns=columns)
+            preds = all_predicates(subset, root.table, columns=columns)
             best_pred = preds[0]
             print("Testing preds...", end='\r')
             for pred in preds:
@@ -204,10 +204,26 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
             print('Splitting {} into {} and {}...'.format(table.name, table.name + '0', table.name + '1'), end='\r')
             child_right, child_left = root.split_leaf(node, best_pred)
             workload_right, workload_left, _ = workload.split(best_pred, prev_preds)
-            dict_right = tree_gen(child_right.table, workload_right, rank_fn, subset_size, child_right, root,
-                                  prev_preds + [best_pred], block_size=block_size)
-            dict_left = tree_gen(child_left.table, workload_left, rank_fn, subset_size, child_left, root,
-                                 prev_preds + [best_pred.flip()], block_size=block_size)
+            dict_right = tree_gen(child_right.table,
+                                  workload_right,
+                                  rank_fn=rank_fn,
+                                  subset_size=subset_size,
+                                  node=child_right,
+                                  root=root,
+                                  prev_preds=prev_preds + [best_pred],
+                                  columns=columns,
+                                  block_size=block_size,
+                                  )
+            dict_left = tree_gen(child_left.table,
+                                 workload_left,
+                                 rank_fn=rank_fn,
+                                 subset_size=subset_size,
+                                 node=child_left,
+                                 root=root,
+                                 prev_preds=prev_preds + [best_pred.flip()],
+                                 columns=columns,
+                                 block_size=block_size,
+                                 )
             output.append(str(best_pred))
             output += [dict_right, dict_left]
             valid_splits = True
