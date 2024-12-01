@@ -103,6 +103,9 @@ class PNode:
         :param factor: The maximum value of len(both_wkld) / len(self.workload)
         :return: True if the node has been split successfully, false otherwise
         """
+        self.pred = None
+        self.left_child = None
+        self.right_child = None
         if verbose:
             print(f"Making preds for node {id} with workload size: {len(self.workload)}", end='\r')
         all_preds = all_predicates_workload(self.table, self.workload)
@@ -135,10 +138,41 @@ class PNode:
         return True
 
     def get_tree(self):
+        # Returns a tree object that can be turned into a json
         if self.is_split():
             return [str(self.pred), self.right_child.get_tree(), self.left_child.get_tree()]
         else:
             return []
+
+    # def index(self, query):
+    #     """
+    #     Index this node using a query
+    #     :param query: a qd query object
+    #     :return: A list of leaf nodes intersected by the query
+    #     """
+    #     if not self.pred:
+    #         # This is a leaf node
+    #         return [self]
+    #     output
+    #     if intersect(query.list_preds(), self.boundaries, )
+
+    def statistics(self):
+        if self.pred is None:
+            size = len(self.workload)
+            return {'max': size, 'min': size, 'average': size, 'depth': 1, 'leaves': 1}
+        else:
+            left_stats = self.left_child.statistics()
+            right_stats = self.right_child.statistics()
+            max_size = max(left_stats['max'], right_stats['max'])
+            min_size = min(left_stats['min'], right_stats['min'])
+            leaves = left_stats['leaves'] + right_stats['leaves']
+            average = (left_stats['leaves'] * left_stats['average']) + (right_stats['leaves'] * right_stats['average'])
+            average /= leaves
+            depth = 1 + max(left_stats['depth'], right_stats['depth'])
+            return {'max': max_size, 'min': min_size, 'average': average, 'depth': depth, 'leaves': leaves}
+
+
+
 
 
 
