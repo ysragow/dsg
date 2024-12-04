@@ -3,6 +3,7 @@ from qd.qd_algorithms import reset
 from qd.qd_predicate_subclasses import intersect, NumComparative, Categorical, Numerical
 from qd.qd_query import Workload
 from qd.qd_predicate import Operator
+from qd.qd_node import Root, Node
 
 
 def all_predicates_workload(table, workload, columns=None):
@@ -170,6 +171,43 @@ class PNode:
             average /= leaves
             depth = 1 + max(left_stats['depth'], right_stats['depth'])
             return {'max': max_size, 'min': min_size, 'average': average, 'depth': depth, 'leaves': leaves}
+
+    def to_qd(self, base_data_path, folder_path, qd_node=None):
+        """
+        Turn a PNode tree into a qd tree
+        :param base_data_path:
+        :param folder_path:
+        :param qd_node: a node object from qd.qd_node
+        :return: the root of the corresponding qd tree
+        """
+        # Initialize on the root node
+        if qd_node is None:
+
+            # Make the folder, if it doesn't exit
+            import os
+            from json import dump
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+
+            # Save the tree
+            rname = '.'.join(base_data_path.split('/')[-1].split('.')[:-1])
+            with open(folder_path + rname + ".json") as file:
+                dump(self.get_tree(), file)
+
+            # Initialize the objects
+            table = table_gen(base_data_path, child_folder=folder_path)
+            qd_node = Root(table)
+
+        # If not a leaf, then split and recurse
+        if self.pred is not None:
+            qd_node.split(self.pred)
+            self.right_child.to_qd(None, None, qd_node=qd_node.child_right)
+            self.left_child.to_qd(None, None, qd_node=qd_node.child_left)
+        return qd_node
+
+
+
+
 
 
 
