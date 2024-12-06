@@ -126,7 +126,7 @@ class Node:
         old_preds = self.preds[pred.column.name]
         preds1 = {}
         preds2 = {}
-        pred_alt = pred.flip(old_preds[0])
+        pred_alt = pred.flip()
         for col in self.table.list_columns():
             if (col == pred.column.name) and (not pred.comparative):
                 # For the relevant column, change one predicate
