@@ -164,7 +164,11 @@ class Table:
                 if self.columns[c].numerical:
                     # this is a numeric column, so deal with it accordingly
                     maxes[c] = max(data.statistics['max'][c])
+                    if maxes[c] is None:
+                        maxes[c] = 0
                     mins[c] = min(data.statistics['min'][c])
+                    if mins[c] is None:
+                        mins[c] = 0
         elif self.storage == 'csv':
             with open(self.path, 'r') as file:
                 data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
