@@ -4,6 +4,7 @@ from qd.qd_query import Query
 from numpy import argsort as np_argsort
 from fastparquet import ParquetFile, write
 from pandas import concat
+from json import dump
 import os
 
 
@@ -243,7 +244,7 @@ class PQD:
         self.layout = layout
         # self.file_dict = file_dict
 
-    def make_files(self, folder_path, make_alg):
+    def make_files(self, folder_path, make_alg, verbose=False):
         """
         Generate files based on the current self.layout and make_alg
         :param folder_path: Folder for storing things in
@@ -293,6 +294,10 @@ class PQD:
             for i in range(self.split_factor):
                 make_alg(file_template.format(i, file_num), eff_dframes[i])
             file_num += 1
+
+        # Save the index
+        with open(folder_path + "/index.json", "w") as file:
+            dump(self.index, file)
 
     def file_gen_1(self, file_path, obj_dict):
         """
