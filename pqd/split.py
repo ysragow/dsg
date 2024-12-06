@@ -191,7 +191,7 @@ class PNode:
 
             # Save the tree
             rname = '.'.join(base_data_path.split('/')[-1].split('.')[:-1])
-            with open(folder_path + rname + ".json") as file:
+            with open(folder_path + "/" + rname + ".json", "w") as file:
                 dump(self.get_tree(), file)
 
             # Initialize the objects
@@ -200,9 +200,9 @@ class PNode:
 
         # If not a leaf, then split and recurse
         if self.pred is not None:
-            qd_node.split(self.pred)
-            self.right_child.to_qd(None, None, qd_node=qd_node.child_right)
-            self.left_child.to_qd(None, None, qd_node=qd_node.child_left)
+            qd_node.split(self.pred, check_bounds=False)
+            _ = self.right_child.to_qd(None, None, qd_node=qd_node.child_right)
+            _ = self.left_child.to_qd(None, None, qd_node=qd_node.child_left)
         return qd_node
 
 

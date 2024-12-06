@@ -1,6 +1,10 @@
-from join import PNode
+from pqd.split import PNode
 from qd.qd_algorithms import index, table_gen
+from qd.qd_query import Query
 from numpy import argsort as np_argsort
+from fastparquet import ParquetFile, write
+from pandas import concat
+import os
 
 
 class LList:
@@ -29,12 +33,14 @@ class LList:
 
     def remove(self, obj):
         prev_obj, next_obj = self.rep[obj]
-        self.rep[next_obj] = (prev_obj, self.rep[next_obj][1])
         if prev_obj is None:
             self.first = next_obj
-        self.rep[prev_obj] = (self.rep[next_obj][0], next_obj)
+        else:
+            self.rep[prev_obj] = (self.rep[prev_obj][0], next_obj)
         if next_obj is None:
             self.last = prev_obj
+        else:
+            self.rep[next_obj] = (prev_obj, self.rep[next_obj][1])
         self.size -= 1
         del self.rep[obj]
 
@@ -52,7 +58,34 @@ def argsort(obj_list, f):
     :param f: a function
     :return: The list of objects, sorted by the function
     """
-    return list([obj_list[i] for i in np.argsort([f(obj) for obj in obj_list])])
+    return list([obj_list[i] for i in np_argsort([f(obj) for obj in obj_list])])
+
+
+class PFile:
+    def __init__(self, file_list, size, is_overflow):
+        """
+        :param file_list: List of files
+        :param size: Number of rows
+        :param is_overflow: Whether this is an overflow file
+        """
+        self.file_list = file_list
+        self.size = size
+        self.made = False
+        self.path = 'None'
+        self.indices = {}
+        for file in file_list:
+            self.indices[file] = (0,0)
+
+    def __str__(self):
+        output = '{'
+        output += f"Files: {self.file_list}, "
+        output += f"Size: {self.size}, "
+        output += f"Path: {self.path}"
+        output += '}'
+        return output
+
+    def __repr__(self):
+        return str(self)
 
 
 class PQD:
@@ -75,28 +108,41 @@ class PQD:
         self.workload = workload
         self.files = None  # This will change when we successfully run one of the "make_files" functions
         self.layout = None  # This will change when we successfully run one of the "make_layout" functions
+        self.file_dict = None # This will change when we successfully run one of the "make_layout" functions
         self.files_func = None  # Indicates which make_files function was used to make the files
         self.layout_func = None  # Indicates which make_layout function was used to make the files
 
-        # Index your workload on the tree
-        self.indices = {}  # map of query ids to their files
+        # The index
+        #   - Queries learn which objs to access from the tree
+        #   - Based on these objs, the index instructs on which files to read
+        self.index = {}
+
+        # Get a list of all files by indexing an empty query
+        self.files_list = []
+
+        # Initialize table_dict, table_q_dict, and the index
         self.table_dict = {}  # dict mapping file names to corresponding table objects
         self.table_q_dict = {}  # dict mapping file names to list of query ids in the workload which access it
-        self.files_list = []
+        all_objs = index(Query([], table), root_path, table)
+        for obj in all_objs:
+            self.index[obj] = []
+            self.table_dict[obj] = table_gen(obj)
+            self.table_q_dict[obj] = []
+
+            # Don't bother dealing with files that are empty
+            if self.table_dict[obj].size != 0:
+                self.files_list.append(obj)
+
+        # Index your workload on the tree
+        self.indices = {}  # map of query ids to their files
         self.query_ids = {}  # maps query ids to queries
         id = 0
         for q in workload.queries:
-            files = index(q, root_path, table)
-            self.indixes[id] = files
+            objs = index(q, root_path, table)
+            self.indices[id] = objs
             self.query_ids[id] = q
-            for file in files:
-                if file not in table_dict:
-                    self.table_dict[file] = table_gen(file)
-                    self.table_q_dict[file] = []
-                    self.files_list.append(file)  # todo: THIS MEANS FILES NOT ACCESSED BY THE WORKLOAD ARE LEFT OUT
-                    # But that probably won't happen because all files generated must have at least one query?
-                    # So it won't happen if we use the same workload...
-                self.table_q_dict[file].append(id)
+            for obj in objs:
+                self.table_q_dict[obj].append(id)
             id += 1
 
         # Setup for all make_layout
@@ -110,6 +156,10 @@ class PQD:
 
     def files_made(self):
         return self.files is not None
+
+    def get_sizes(self):
+        if not self.layout_made():
+            raise Exception("No layout has been made!")
 
     def make_layout_1(self):
         """
@@ -125,16 +175,18 @@ class PQD:
         """
         # Initialize the layout list.  Assign this to self.layout at the end
         layout = []
+        file_dict = {}
 
         # Make the linked list
         size_llist = LList(argsort(self.files_list, lambda x: self.eff_size_dict[x] * len(self.table_q_dict[x])))
 
-        # Enter the while loop, which does not cease until everything is assigned
+        # Enter the while loop, which does not cease until every obj is assigned
         while len(size_llist) > 0:
             # Initialize variables, including first obj
             obj = size_llist.pop()
             current_file = [obj]  # the files that will be in this set
             total_size = self.eff_size_dict[obj]
+            file_dict[obj] = []
             queries_accessed = set(self.table_q_dict[obj])  # contains the ids of the queries that access this file
 
             # Initialize npq_dict: the dict mapping objs to a set of their queries not present in queries_accessed
@@ -145,20 +197,15 @@ class PQD:
                     if q not in queries_accessed:
                         npq_dict[obj_2].add(q)
 
-            # If obj is too big, it needs to have some files to itself
-            for i in range(self.table_dict[obj].size // (2 * self.abstract_block_size)):
-                layout.append([obj])
-
             # Add more objects
             while total_size <= self.abstract_block_size:
                 # Get the new object and remove it from size_llist
                 active_files = list([obj_2 for obj_2 in size_llist])
+                if len(active_files) == 0:
+                    break
                 obj = argsort(active_files, lambda x: (len(npq_dict[x]) / len(self.table_q_dict[x])))[0]
+                file_dict[obj] = []
                 size_llist.remove(obj)
-
-                # If obj is too big, it needs to have some files to itself
-                for i in range(self.table_dict[obj].size // (2 * self.abstract_block_size)):
-                    layout.append([obj])
 
                 # Update layout with new object
                 current_file.append(obj)
@@ -187,40 +234,94 @@ class PQD:
                 size_llist.remove(obj)
                 total_size += self.eff_size_dict[obj]
 
-                # If obj is too big, it needs to have some files to itself
-                for i in range(self.table_dict[obj].size // (2 * self.abstract_block_size)):
-                    layout.append([obj])
-
             # Finally, add the current file to the layout
-            layout.append(current_file)
+            new_pfile = PFile(current_file, sum([self.eff_size_dict[obj] for obj in current_file]), False)
+            file_dict[obj].append(new_pfile)
+            layout.append(new_pfile)
 
         # Assign the layout to self.layout
         self.layout = layout
+        self.file_dict = file_dict
 
-
-
-
-    def make_files_1(self, folder_path):
+    def make_files(self, folder_path, make_alg):
         """
-        Generate files based on the current self.layout
+        Generate files based on the current self.layout and make_alg
+        :param folder_path: Folder for storing things in
+        :param make_alg: which file_gen algorithm to use
+        """
+        # Make the folders, if they don't exist
+        file_template = folder_path + "/" + "{}/" + self.name + "{}.parquet"
+        folder_template = folder_path + "/" + "{}"
+        for i in range(self.split_factor):
+            folder = folder_template.format(i)
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+
+        # Begin the for loop.  Load objects into memory.
+        file_num = 0
+        for pfile in self.layout:
+            # Initialize variables
+            eff_dframes = {}  # Maps n to a dict mapping obj to the slice of the dframes[obj] going into f_path/n/pfile
+            for i in range(self.split_factor):
+                eff_dframes[i] = {}
+
+            # Loop through all the objects in the pfile
+            for obj in pfile.file_list:
+                df = ParquetFile(obj).to_pandas()
+                df_index = 0  # Keep track of our index in the dataframe
+
+                # Account for overflow
+                for _ in range(self.table_dict[obj].size // (2 * self.abstract_block_size)):
+                    for i in range(self.split_factor):
+                        make_alg(
+                            file_template.format(i, file_num),
+                            {obj: df[df_index:df_index + (2 * self.block_size)]}
+                        )
+                        df_index += 2 * self.block_size
+                    file_num += 1
+
+                # Add to effective dframes
+                eff_size = self.eff_size_dict[obj]
+                ind_size = eff_size // self.split_factor  # size of each chunk
+                cutoff = eff_size % self.split_factor  # cutoff for when to stop adding 1 to size
+                for i in range(self.split_factor):
+                    split_size = ind_size + (0 if i < cutoff else 1)
+                    eff_dframes[i][obj] = df[df_index: df_index + split_size]
+                    df_index += split_size
+
+            # Create each file
+            for i in range(self.split_factor):
+                make_alg(file_template.format(i, file_num), eff_dframes[i])
+            file_num += 1
+
+    def file_gen_1(self, file_path, obj_dict):
+        """
+        Generate a file
         **This one does not pay attention to row groups**
-        :param folder_path: Folder for storing things in
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
         """
-        pass
+        # print(list(obj_dict.items()))
+        write(file_path, concat(obj_dict.values()))
+        for obj in obj_dict.keys():
+            self.index[obj].append(file_path)
 
-    def make_files_2(self, folder_path):
+    def file_gen_2(self, file_path, obj_dict):
         """
-        Generate files based on the current self.layout
+        Generate a file
         **This one organizes row groups only according to file size**
-        :param folder_path: Folder for storing things in
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
         """
         pass
 
-    def make_files_3(self, folder_path):
+    def file_gen_3(self, file_path):
         """
-        Generate files based on the current self.layout
+        Generate a file
         **This one adds another column for ease of row group skipping**
-        :param folder_path: Folder for storing things in
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
+
         """
         pass
 
