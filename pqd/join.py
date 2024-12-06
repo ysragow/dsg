@@ -108,7 +108,7 @@ class PQD:
         self.workload = workload
         self.files = None  # This will change when we successfully run one of the "make_files" functions
         self.layout = None  # This will change when we successfully run one of the "make_layout" functions
-        self.file_dict = None # This will change when we successfully run one of the "make_layout" functions
+        # self.file_dict = None # This will change when we successfully run one of the "make_layout" functions
         self.files_func = None  # Indicates which make_files function was used to make the files
         self.layout_func = None  # Indicates which make_layout function was used to make the files
 
@@ -175,7 +175,7 @@ class PQD:
         """
         # Initialize the layout list.  Assign this to self.layout at the end
         layout = []
-        file_dict = {}
+        # file_dict = {}
 
         # Make the linked list
         size_llist = LList(argsort(self.files_list, lambda x: self.eff_size_dict[x] * len(self.table_q_dict[x])))
@@ -186,7 +186,7 @@ class PQD:
             obj = size_llist.pop()
             current_file = [obj]  # the files that will be in this set
             total_size = self.eff_size_dict[obj]
-            file_dict[obj] = []
+            # file_dict[obj] = []
             queries_accessed = set(self.table_q_dict[obj])  # contains the ids of the queries that access this file
 
             # Initialize npq_dict: the dict mapping objs to a set of their queries not present in queries_accessed
@@ -204,7 +204,7 @@ class PQD:
                 if len(active_files) == 0:
                     break
                 obj = argsort(active_files, lambda x: (len(npq_dict[x]) / len(self.table_q_dict[x])))[0]
-                file_dict[obj] = []
+                # file_dict[obj] = []
                 size_llist.remove(obj)
 
                 # Update layout with new object
@@ -236,12 +236,12 @@ class PQD:
 
             # Finally, add the current file to the layout
             new_pfile = PFile(current_file, sum([self.eff_size_dict[obj] for obj in current_file]), False)
-            file_dict[obj].append(new_pfile)
+            # file_dict[obj].append(new_pfile)
             layout.append(new_pfile)
 
         # Assign the layout to self.layout
         self.layout = layout
-        self.file_dict = file_dict
+        # self.file_dict = file_dict
 
     def make_files(self, folder_path, make_alg):
         """
