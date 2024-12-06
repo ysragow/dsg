@@ -167,7 +167,7 @@ class Table:
                     mins[c] = min(data.statistics['min'][c])
                     if maxes[c] is None:
                         assert mins[c] is None, "Something fishy is happening here..."
-                        if columns[c].ctype == 'DATE':
+                        if self.columns[c].ctype == 'DATE':
                             maxes[c] = np.datetime64('1970-01-01')
                             mins[c] = np.datetime64('1970-01-01')
                         else:
