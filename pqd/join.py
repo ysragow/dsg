@@ -268,6 +268,8 @@ class PQD:
 
             # Loop through all the objects in the pfile
             for obj in pfile.file_list:
+                if verbose:
+                    print(f"Loading dataframe for file {obj}...")
                 df = ParquetFile(obj).to_pandas()
                 df_index = 0  # Keep track of our index in the dataframe
 
