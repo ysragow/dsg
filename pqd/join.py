@@ -274,6 +274,8 @@ class PQD:
                 # Account for overflow
                 for _ in range(self.table_dict[obj].size // (2 * self.abstract_block_size)):
                     for i in range(self.split_factor):
+                        if verbose:
+                            print(f"Making file {file_template.format(i, file_num)} from file {obj}")
                         make_alg(
                             file_template.format(i, file_num),
                             {obj: df[df_index:df_index + (2 * self.block_size)]}
@@ -292,6 +294,8 @@ class PQD:
 
             # Create each file
             for i in range(self.split_factor):
+                if verbose:
+                    print(f"Making file {file_template.format(i, file_num)} from files {eff_dframes[i].keys()}")
                 make_alg(file_template.format(i, file_num), eff_dframes[i])
             file_num += 1
 
