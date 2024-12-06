@@ -223,7 +223,17 @@ def table_gen(path, child_folder=None):
         if numerical:
             # Make a numerical column
             cmax = max(file.statistics['max'][c_name])
+            if cmax is None:
+                if c_type == 'DATE':
+                    cmax = np.datetime64('1970-01-01')
+                else:
+                    cmax = 0
             cmin = min(file.statistics['min'][c_name])
+            if cmin is None:
+                if c_type == 'DATE':
+                    cmin = np.datetime64('1970-01-01')
+                else:
+                    cmin = 0
             columns[c_name] = Column(c_name, i, c_type, cmax=cmax, cmin=cmin)
         else:
             # Don't worry about the values - CatComparatives seem not to exist in TPC-H

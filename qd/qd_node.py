@@ -67,7 +67,10 @@ class Node:
                 assert col_preds[1].column == col, "A top predicate for column " + col_preds[1].column.name + "has been assigned to column" + col.name
                 assert 'num' in dir(col_preds[0]), "Bottom predicate for this column must be numerical"
                 assert 'num' in dir(col_preds[1]), "Top predicate for this column must be numerical"
-                assert col_preds[0].num <= col_preds[1].num, "Contradictory constraints on column " + col.name
+                if col_preds[0].num is None:
+                    assert col_preds[1].num is None, "Min is None, max is not"
+                else:
+                    assert col_preds[0].num <= col_preds[1].num, "Contradictory constraints on column " + col.name
             else:
                 assert len(col_preds) == 1, "Numerical columns must have exactly 2 predicates"
                 # assert col_preds[0].op.symbol == 'IN', "The first predicate for this column must be IN"
@@ -109,15 +112,17 @@ class Node:
         return output
 
     # Splitting the node
-    def split(self, pred):
+    def split(self, pred, check_bounds=True):
         """
         Split the node into two children
         :param pred: the predicate upon which the node is split
+        :param check_bounds: check if this predicate can exist with the bounds of the data
         """
         # assert not self.leaf, "This function should not be called on the root node"
         # assert not pred.comparative, "A node cannot split on a comparative predicate"
         assert not self.is_split, "This node has already been split"
-        assert intersect(list(self.preds[pred.column.name]) + [pred]), "This predicate is not within the parent"
+        if check_bounds and (not intersect(list(self.preds[pred.column.name]) + [pred])):
+            raise Exception(f"The predicate {pred} is not within the parent preds: \n{list(self.preds[pred.column.name])}")
         old_preds = self.preds[pred.column.name]
         preds1 = {}
         preds2 = {}
@@ -132,7 +137,8 @@ class Node:
                         if not pred.op(old_preds[i].num, pred.num):
                             index = i
                             valid = not valid
-                    assert intersect(list(old_preds) + [pred]), "This predicate is not within the parent predicate"
+                    if check_bounds and (not intersect(list(self.preds[pred.column.name]) + [pred])):
+                        raise Exception(f"The predicate {pred} is not within the parent preds: \n{list(self.preds[pred.column.name])}")
                     new_preds1 = []
                     new_preds2 = []
                     for i in range(2):
