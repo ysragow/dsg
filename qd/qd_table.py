@@ -164,11 +164,15 @@ class Table:
                 if self.columns[c].numerical:
                     # this is a numeric column, so deal with it accordingly
                     maxes[c] = max(data.statistics['max'][c])
-                    if maxes[c] is None:
-                        maxes[c] = 0
                     mins[c] = min(data.statistics['min'][c])
-                    if mins[c] is None:
-                        mins[c] = 0
+                    if maxes[c] is None:
+                        assert mins[c] is None, "Something fishy is happening here..."
+                        if columns[c].ctype == 'DATE':
+                            maxes[c] = np.datetime64('1970-01-01')
+                            mins[c] = np.datetime64('1970-01-01')
+                        else:
+                            maxes[c] = 0
+                            mins[c] = 0
         elif self.storage == 'csv':
             with open(self.path, 'r') as file:
                 data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
