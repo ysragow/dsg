@@ -3,6 +3,7 @@ from time import time
 from json import load, dump
 from os import listdir
 from qd.qd_algorithms import index as qd_index, table_gen, reset
+from pqd.algorithms import index as pqd_index
 from sys import argv
 from glob import glob
 
@@ -12,7 +13,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
 
     assert layout in ("rgm", "qd", "index"), "Invalid layout"
 
-    if layout == 'qd':
+    if layout in ('qd', 'pqd'):
         assert query_obj is not None, "A query object is required to index qd trees"
         potential_files = glob(name + '/*.parquet')
         assert len(potential_files) == 1, f"There should be exactly one parquet file in {name}"
@@ -27,7 +28,10 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
                 pass
             else:
                 root_file = file
-        return qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=True)
+        if layout == 'qd':
+            return qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=True)
+        elif layout == 'pqd':
+            return pqd_index(query_obj, root_file[:-4] + 'parquet', table)
 
     num_partitions = int(folder.split('/')[-1])
 
