@@ -11,7 +11,7 @@ from glob import glob
 def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
     start_time = time()
 
-    assert layout in ("rgm", "qd", "index"), "Invalid layout"
+    assert layout in ("rgm", "qd", "index", "pqd"), "Invalid layout"
 
     if layout in ('qd', 'pqd'):
         assert query_obj is not None, "A query object is required to index qd trees"
