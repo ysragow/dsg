@@ -1,4 +1,4 @@
-from params import queries, query_objects, name, partitions, layout
+from params import queries, query_objects, name, partitions, layout, table_path
 from time import time
 from json import load, dump
 from os import listdir
@@ -15,9 +15,9 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
 
     if layout in ('qd', 'pqd'):
         assert query_obj is not None, "A query object is required to index qd trees"
-        potential_files = glob(name + '/*.parquet')
-        assert len(potential_files) == 1, f"There should be exactly one parquet file in {name}"
-        table = table_gen(potential_files[0])
+        # potential_files = glob(name + '/*.parquet')
+        # assert len(potential_files) == 1, f"There should be exactly one parquet file in {name}"
+        table = table_gen(table_path)
         query_obj = reset(table, query_obj)
         root_file = None
         potential_files = glob(folder + '/*.json')
