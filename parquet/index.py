@@ -19,7 +19,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         # assert len(potential_files) == 1, f"There should be exactly one parquet file in {name}"
         table = table_gen(table_path)
         query_obj = reset(table, query_obj)
-        root_file = folder + '.'.join(table_path.split('/')[-1].split('.')[:-1]) + '.json'
+        root_file = folder + '/' + '.'.join(table_path.split('/')[-1].split('.')[:-1]) + '.json'
         # root_file = None
         # potential_files = glob(folder + '/*.json')
         # if len(potential_files) == 0:
