@@ -100,7 +100,7 @@ def remove_index(func):
         func(self, file_path, obj_dict)
         if 'index' in ParquetFile(file_path).columns:
             print(f"Removing index from {file_path}...", end='\r')
-            pq.write_table(pq.read_table(file_path).drop('index'))
+            pq.write_table(pq.read_table(file_path).drop('index'), file_path)
     return f
 
 
