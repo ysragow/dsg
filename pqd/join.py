@@ -264,6 +264,7 @@ class PQD:
         Generate files based on the current self.layout and make_alg
         :param folder_path: Folder for storing things in
         :param make_alg: which file_gen algorithm to use
+        :param verbose: how much to print
         """
         # Make the folders, if they don't exist
         file_template = folder_path + "/" + "{}/" + self.name + "{}.parquet"
@@ -284,19 +285,21 @@ class PQD:
             # Loop through all the objects in the pfile
             for obj in pfile.file_list:
                 if verbose:
-                    print(f"Loading dataframe for file {obj}...")
+                    print(f"Loading dataframe for file {obj}...", end='\r')
+
                 df = ParquetFile(obj).to_pandas()
+                if verbose:
+                    print(f"Loaded dataframe for file {obj} with {df.shape[0]} rows")
                 df_index = 0  # Keep track of our index in the dataframe
 
                 # Account for overflow
                 for _ in range(self.table_dict[obj].size // (2 * self.abstract_block_size)):
                     for i in range(self.split_factor):
+                        file_chunk = df[df_index:df_index + (2 * self.block_size)]
+                        chunk_file_name = file_template.format(i, file_num)
                         if verbose:
-                            print(f"Making file {file_template.format(i, file_num)} from file {obj}")
-                        make_alg(
-                            file_template.format(i, file_num),
-                            {obj: df[df_index:df_index + (2 * self.block_size)]}
-                        )
+                            print(f"Making file {chunk_file_name} from file {obj} with {file_chunk.shape[0]} rows")
+                        make_alg(chunk_file_name, {obj: file_chunk})
                         df_index += 2 * self.block_size
                     file_num += 1
 
@@ -312,7 +315,9 @@ class PQD:
             # Create each file
             for i in range(self.split_factor):
                 if verbose:
-                    print(f"Making file {file_template.format(i, file_num)} from files {eff_dframes[i].keys()}")
+                    p_temp = "{} rows from file {}"
+                    p_str = ", ".join([p_temp.format(eff_dframes[i][obj3].shape[0], obj3) for obj3 in eff_dframes[i].keys()])
+                    print(f"Making file {file_template.format(i, file_num)} with {p_str}")
                 make_alg(file_template.format(i, file_num), eff_dframes[i])
             file_num += 1
 
