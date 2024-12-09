@@ -308,7 +308,7 @@ class PQD:
                 ind_size = eff_size // self.split_factor  # size of each chunk
                 cutoff = eff_size % self.split_factor  # cutoff for when to stop adding 1 to size
                 for i in range(self.split_factor):
-                    split_size = ind_size + (0 if i < cutoff else 1)
+                    split_size = ind_size + (1 if i < cutoff else 0)
                     eff_dframes[i][obj] = df[df_index: df_index + split_size]
                     df_index += split_size
 
