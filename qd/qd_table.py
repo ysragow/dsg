@@ -208,8 +208,8 @@ def table_gen(path, child_folder=None):
     :return: a table object
     """
     file = ParquetFile(path)
-    split_path = path.split('/', 2)
-    t_name = split_path[-1][:-8]
+    split_path = path.split('/')
+    t_name = '.'.join(split_path[-1].split('.')[:-1])
     columns = {}
     for i in range(len(file.columns)):
         numerical = True
