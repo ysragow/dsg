@@ -12,7 +12,7 @@ def index(query, root_path, table):
     """
     tree_files = qd_index(query, root_path, table)
     output = set()
-    with open('/'.join(root_path.split('/')[:-1]) + 'index.json', 'r') as f:
+    with open('/'.join(root_path.split('/')[:-1]) + '/index.json', 'r') as f:
         file_dict = load(f)
     for obj in tree_files:
         for file in file_dict[obj]:
