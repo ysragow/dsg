@@ -5,7 +5,7 @@ from os import listdir
 from qd.qd_algorithms import index as qd_index, table_gen, reset
 from pqd.algorithms import index as pqd_index
 from sys import argv
-from glob import glob
+# from glob import glob
 
 
 def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
@@ -19,15 +19,16 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         # assert len(potential_files) == 1, f"There should be exactly one parquet file in {name}"
         table = table_gen(table_path)
         query_obj = reset(table, query_obj)
-        root_file = None
-        potential_files = glob(folder + '/*.json')
-        if len(potential_files) == 0:
-            raise Exception("The folder " + folder + "does not have any jsons in it")
-        for file in potential_files:
-            if file[-11:] == '/files.json':
-                pass
-            else:
-                root_file = file
+        root_file = folder + '.'.join(table_path.split('/')[-1].split('.')[:-1]) + '.json'
+        # root_file = None
+        # potential_files = glob(folder + '/*.json')
+        # if len(potential_files) == 0:
+        #     raise Exception("The folder " + folder + "does not have any jsons in it")
+        # for file in potential_files:
+        #     if file[-11:] == '/files.json':
+        #         pass
+        #     else:
+        #         root_file = file
         if layout == 'qd':
             return qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=True)
         elif layout == 'pqd':
