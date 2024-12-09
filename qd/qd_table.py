@@ -89,6 +89,7 @@ class Table:
 
     def split(self, pred):
         file_str = '{}/{}{}.{}'.format(self.child_folder, self.name.split('/')[-1], '{}', self.storage)
+        print("Child Folder:", self.child_folder)
         columns = self.columns.copy()
         if self.storage == 'parquet':
             # data = ParquetFile(self.path)
