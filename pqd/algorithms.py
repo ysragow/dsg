@@ -13,7 +13,6 @@ def index(query, root_path, table):
     # The index should be in the parent directory
     split_path = root_path.split('/')
     lower_path = '/'.join(split_path[:-2]) + '/' + split_path[-1]
-    print(lower_path)
     tree_files = qd_index(query, lower_path, table)
     output = set()
     with open('/'.join(split_path[:-1]) + '/index.json', 'r') as f:
