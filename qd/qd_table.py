@@ -114,7 +114,7 @@ class Table:
             data = csv.reader(file, quoting=csv.QUOTE_NONNUMERIC)
             data_0 = csv.writer(file_0, quoting=csv.QUOTE_NONNUMERIC)
             data_1 = csv.writer(file_1, quoting=csv.QUOTE_NONNUMERIC)
-            data.__next__()
+            _ = data.__next__()
             data_0.writerow(self.column_list)
             data_1.writerow(self.column_list)
             data_0_size = 0
@@ -138,9 +138,9 @@ class Table:
         # table2 = table_gen(path_s + '1.' + storage)
         table1 = table_gen(file_str.format(0))
         table2 = table_gen(file_str.format(1))
-        print("Table 1 size:", table1.size)
-        print("Table 2 size:", table2.size)
-        print("Total table size:", self.size)
+        print(f"Table 1 ({table1.path}) size:", table1.size)
+        print(f"Table 2 ({table2.path}) size:", table2.size)
+        print(f"Total table ({self.path}) size:", self.size)
         return table1, table2
 
     def get_boundaries(self):

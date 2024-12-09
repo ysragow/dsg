@@ -1,6 +1,6 @@
 from qd.qd_table import table_gen, Table
 from qd.qd_algorithms import reset
-from qd.qd_predicate_subclasses import intersect, NumComparative, Categorical, Numerical
+from qd.qd_predicate_subclasses import intersect, NumComparative, Categorical, Numerical, pred_gen
 from qd.qd_query import Workload
 from qd.qd_predicate import Operator
 from qd.qd_node import Root, Node
@@ -80,18 +80,26 @@ class PNode:
     """
     A node containing a workload.  Its main function is to split and output a tree
     """
-    def __init__(self, workload, table, boundaries=None):
+    def __init__(self, workload, table, boundaries=None, tree=None):
         """
         Create a PNode object
         :param workload: The workload at this node
         :param table: A table object
         :param boundaries: A list of predicates beyond the table mins and maxes which bound this node
+        :param tree: You can initialize this from a tree, as well
         """
         if boundaries is None:
             boundaries = []
         self.workload = workload
         self.table = table
         self.boundaries = boundaries
+        if tree is not None:
+            if len(tree) != 0:
+                pred = pred_gen(tree[0], table)
+                self.right_child = PNode(workload, table, boundaries=boundaries + [pred], tree=tree[1])
+                self.left_child = PNode(workload, table, boundaries=boundaries + [pred.flip], tree=tree[2])
+                self.pred = pred
+                return
         self.left_child = None
         self.right_child = None
         self.pred = None
@@ -187,7 +195,7 @@ class PNode:
             import os
             from json import dump
             if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
+                _ = os.makedirs(folder_path)
 
             # Save the tree
             rname = '.'.join(base_data_path.split('/')[-1].split('.')[:-1])
