@@ -3,6 +3,7 @@ from qd.qd_algorithms import index, table_gen
 from qd.qd_query import Query
 from numpy import argsort as np_argsort
 from fastparquet import ParquetFile, write
+from pyarrow import parquet as pq
 from pandas import concat
 from json import dump
 import os
@@ -87,6 +88,20 @@ class PFile:
 
     def __repr__(self):
         return str(self)
+
+
+def remove_index(func):
+    """
+    Decorator for file_gen functions to remove the index column if it exists
+    :param func: a file_gen function of the pqd class, taking in self, file_path, obj_dict
+    :return: A file_gen function, decorated to remove the index
+    """
+    def f(self, file_path, obj_dict):
+        func(self, file_path, obj_dict)
+        if 'index' in ParquetFile(file_path).columns:
+            print(f"Removing index from {file_path}...", end='\r')
+            pq.write_table(pq.read_table(file_path).drop('index'))
+    return f
 
 
 class PQD:
@@ -305,6 +320,7 @@ class PQD:
         with open(folder_path + "/index.json", "w") as file:
             dump(self.index, file)
 
+    @remove_index
     def file_gen_1(self, file_path, obj_dict):
         """
         Generate a file
@@ -313,10 +329,12 @@ class PQD:
         :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
         """
         # print(list(obj_dict.items()))
+
         write(file_path, concat(obj_dict.values()))
         for obj in obj_dict.keys():
             self.index[obj].append(file_path)
 
+    @remove_index
     def file_gen_2(self, file_path, obj_dict):
         """
         Generate a file
@@ -326,7 +344,8 @@ class PQD:
         """
         pass
 
-    def file_gen_3(self, file_path):
+    @remove_index
+    def file_gen_3(self, file_path, obj_dict):
         """
         Generate a file
         **This one adds another column for ease of row group skipping**
