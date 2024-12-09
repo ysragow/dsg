@@ -1,4 +1,4 @@
-from params import queries, query_objects, name, partitions, layout, table_path
+from params import queries, query_objects, name, partitions, layout, table_path, verbosity_2
 from time import time
 from json import load, dump
 from os import listdir
@@ -30,7 +30,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         #     else:
         #         root_file = file
         if layout == 'qd':
-            return qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=True)
+            return qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=verbosity_2)
         elif layout == 'pqd':
             return pqd_index(query_obj, root_file[:-4] + 'parquet', table)
 
