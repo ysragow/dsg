@@ -10,9 +10,11 @@ def index(query, root_path, table):
     :param table:
     :return: A list of files accessed by this query
     """
-    tree_files = qd_index(query, root_path, table)
+    # The index should be in the parent directory
+    split_path = root_path.split('/')
+    tree_files = qd_index(query, '/'.join(split_path[:-2]) + '/' + split_path[-1], table)
     output = set()
-    with open('/'.join(root_path.split('/')[:-1]) + '/index.json', 'r') as f:
+    with open('/'.join(split_path[:-1]) + '/index.json', 'r') as f:
         file_dict = load(f)
     for obj in tree_files:
         for file in file_dict[obj]:
