@@ -5,6 +5,7 @@ from qd.qd_query import Query
 from qd.qd_table import Table
 from metaparams import read
 from pandas import DataFrame, concat as pa_concat
+from params import scan as scan_param
 from fastparquet import ParquetFile
 
 
@@ -15,6 +16,8 @@ def read_pq(file, filters=None):
     :param filters: Filters
     :return: Some kind of a table gained from filtering on the parquet file
     """
+    if scan_param:
+        filters = None
     if read == 'pyarrow':
         return parquet.read_table(file, filters=filters)
     elif read == 'fastparquet':
