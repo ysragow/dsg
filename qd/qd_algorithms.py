@@ -234,7 +234,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
             print("Leaving {} with {} rows".format(table.path, table.size))
     if top:
         print(output)
-        print("Writing output to " + table.folder + '/' + table.name + '.json')
+        print("Writing output to " + table.child_folder + '/' + table.name + '.json')
         with open(table.child_folder + '/' + table.name + '.json', 'w') as file:
             dump(output, file)
     return output
