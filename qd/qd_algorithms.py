@@ -390,8 +390,14 @@ def q_gen_const(path):
     return lambda strs: Query([pred_gen(s, table) for s in strs], table)
 
 
-
-
-
-
-
+def load_workload(path, table):
+    """
+    Loads a workload from a json file according to a table object
+    :param path: path to the workload json
+    :param table: a table object
+    :return: a workload object
+    """
+    q_gen = q_gen_const(table.path)
+    with open(path, "r") as file:
+        wkld_json = load(file)
+    return Workload(list([q_gen(q) for q in wkld_json]))
