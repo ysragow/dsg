@@ -48,8 +48,8 @@ class LList:
 
     def pop(self):
         # Remove and return the top object
-        output = self.first
-        self.remove(self.first)
+        output = self.last
+        self.remove(self.last)
         return output
 
 
