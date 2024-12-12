@@ -177,7 +177,7 @@ class PQD:
         if not self.layout_made():
             raise Exception("No layout has been made!")
 
-    def make_layout_1(self):
+    def make_layout_1(self, take_top=True):
         """
         Create self.layout
         Algo specs:
@@ -199,7 +199,11 @@ class PQD:
         # Enter the while loop, which does not cease until every obj is assigned
         while len(size_llist) > 0:
             # Initialize variables, including first obj
-            obj = size_llist.pop()
+            if take_top:
+                obj = size_llist.pop()
+            else:
+                obj = size_llist.first
+                size_llist.remove(size_llist.first)
             current_file = [obj]  # the files that will be in this set
             total_size = self.eff_size_dict[obj]
             # file_dict[obj] = []
@@ -258,6 +262,9 @@ class PQD:
         # Assign the layout to self.layout
         self.layout = layout
         # self.file_dict = file_dict
+
+    def make_layout_1a(self):
+        self.make_layout_1(take_top=False)
 
     def make_files(self, folder_path, make_alg, verbose=False):
         """
