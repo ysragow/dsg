@@ -224,6 +224,8 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
     :param verbose2: whether to print even more things
     :return: A pyarrow table containing the contents of every file
     """
+    if verbose:
+        print(f"\nFilters: {filters}\nFiles: {files}")
     start_time = time()
     items = [[filters, file] for file in files]
     f = filter_scan if scan else filter_read
