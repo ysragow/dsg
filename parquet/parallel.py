@@ -16,20 +16,25 @@ def read_pq(file, filters=None):
     :param filters: Filters
     :return: Some kind of a table gained from filtering on the parquet file
     """
-    if scan_param:
-        filters = None
-    if read == 'pyarrow':
-        return parquet.read_table(file, filters=filters)
-    elif read == 'fastparquet':
-        # old code
-        # return ParquetFile(file).to_pandas(filters=filters, row_filter=True).reset_index(drop=True)
+    if scan_param == 'rg':
+        return ParquetFile(file).to_pandas(filters=filters, row_filter=False).reset_index(drop=True)
+    elif (scan_param == 'pure') or (scan_param is True):
+        if read == 'pyarrow':
+            return parquet.read_table(file)
+        elif read == 'fastparquet':
+            return ParquetFile(file).to_pandas()
+    elif (scan_param is None) or (scan_param is False):
+        if read == 'pyarrow':
+            return parquet.read_table(file, filters=filters)
+        elif read == 'fastparquet':
+            return ParquetFile(file).to_pandas(filters=filters, row_filter=False).reset_index(drop=True)
 
         # new code (NOTE: DOES NOT FILTER BEYOND ROW GROUPS)
-        output = table_concat(list(ParquetFile(file).iter_row_groups(filters=filters)))
-        if len(output) == 0:
-            return DataFrame({})
-        else:
-            return output[0]
+        # output = table_concat(list(ParquetFile(file).iter_row_groups(filters=filters)))
+        # if len(output) == 0:
+        #     return DataFrame({})
+        # else:
+        #     return output[0]
     else:
         raise Exception('Invalid value of read')
 
