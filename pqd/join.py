@@ -325,7 +325,7 @@ class PQD:
         with open(folder_path + "/index.json", "w") as file:
             dump(self.index, file)
 
-    @remove_index
+    # @remove_index
     def file_gen_1(self, file_path, obj_dict):
         """
         Generate a file
@@ -339,7 +339,7 @@ class PQD:
         for obj in obj_dict.keys():
             self.index[obj].append(file_path)
 
-    @remove_index
+    # @remove_index
     def file_gen_1a(self, file_path, obj_dict):
         """
         Generate a file
@@ -360,7 +360,7 @@ class PQD:
 
         write(file_path, concat([obj_dict[obj] for obj in objs]), row_group_offsets=rg_indices)
 
-    @remove_index
+    # @remove_index
     def file_gen_2(self, file_path, obj_dict):
         """
         Generate a file
