@@ -340,10 +340,31 @@ class PQD:
             self.index[obj].append(file_path)
 
     @remove_index
+    def file_gen_1a(self, file_path, obj_dict):
+        """
+        Generate a file
+        **This one gives each chunk its own row group**
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
+        """
+
+        objs = list(obj_dict.keys())
+        total_size = 0
+        rg_indices = []
+
+        # Insert files into the index
+        for obj in objs:
+            self.index[obj].append(file_path)
+            rg_indices.append(total_size)
+            total_size += obj_dict[obj].shape[0]
+
+        write(file_path, concat([obj_dict[obj] for obj in objs]), row_group_offsets=rg_indices)
+
+    @remove_index
     def file_gen_2(self, file_path, obj_dict):
         """
         Generate a file
-        **This one organizes row groups only according to file size**
+        **This one organizes row groups only according file size and which queries access what**
         :param file_path: Folder for storing things in
         :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
         """
