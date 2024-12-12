@@ -38,11 +38,14 @@ def run_all(f, files, args, kwargs, drop=False):
             if type(dnf[2]) in (float, int):
                 q.append(dnf)
             elif type(dnf[2]) == datetime64:
-                date_str = str(dnf[2])
-                arg_2 = '%Y-%m-%d'
-                if len(date_str) != 10:
-                    arg_2 += ' %H:%M:%S'
-                q.append((dnf[0], dnf[1], scalar(datetime.strptime(date_str, arg_2))))
+                if (read == 'fastparquet') or (scan == 'rg'):
+                    q.append(dnf)
+                elif read == 'pyarrow':
+                    date_str = str(dnf[2])
+                    arg_2 = '%Y-%m-%d'
+                    if len(date_str) != 10:
+                        arg_2 += ' %H:%M:%S'
+                    q.append((dnf[0], dnf[1], scalar(datetime.strptime(date_str, arg_2))))
         q = [q]
         query_files = files[j]
         # print(f.__repr__().split(' ')[1] + ' with args ' + str([q, query_files] + args) + 'and kwargs ' + str(kwargs))
@@ -92,7 +95,7 @@ def main(verbosity=False):
 
     offset = 0
     query = queries[0]
-    drop_caches = False
+    drop_cache = False
     for i in range(len(argv)):
         if (i == 1) and (argv[1][0] == '-'):
             if 'v' in argv[1]:
@@ -105,7 +108,7 @@ def main(verbosity=False):
                 query[1] = (query[1][0], query[1][1], int(argv[3 + offset]))
                 queries = [query]
             if 'd' in argv[1]:
-                drop_caches = True
+                drop_cache = True
     parallel_dict = {}
     pooled_dict = {}
     regular_dict = {}
@@ -121,13 +124,13 @@ def main(verbosity=False):
         for process_count in processes:
             arg = [process_count]
             if 'parallel' in query_types:
-                parallel_times_dict[process_count] = run_all(parallel_read, files_list, arg, kwarg, drop_caches)
+                parallel_times_dict[process_count] = run_all(parallel_read, files_list, arg, kwarg, drop_cache)
             if 'pooled' in query_types:
-                pooled_times_dict[process_count] = run_all(pooled_read, files_list, arg, kwarg, drop_caches)
+                pooled_times_dict[process_count] = run_all(pooled_read, files_list, arg, kwarg, drop_cache)
         parallel_dict[partition_count] = parallel_times_dict
         pooled_dict[partition_count] = pooled_times_dict
         if 'regular' in query_types:
-            regular_dict[partition_count] = run_all(regular_read, files_list, [], kwarg, drop_caches)
+            regular_dict[partition_count] = run_all(regular_read, files_list, [], kwarg, drop_cache)
     if not scan:
         return
     overall_dict = {}
