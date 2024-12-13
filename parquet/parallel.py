@@ -5,7 +5,7 @@ from qd.qd_query import Query
 from qd.qd_table import Table
 from metaparams import read
 from pandas import DataFrame, concat as pa_concat
-from params import scan as scan_param
+from params import scan as scan_param, verbosity_2
 from fastparquet import ParquetFile
 
 
@@ -225,7 +225,7 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
     :param verbose2: whether to print even more things
     :return: A pyarrow table containing the contents of every file
     """
-    if verbose:
+    if verbosity_2:
         print(f"\nFilters: {filters}\nFiles: {files}")
     start_time = time()
     items = [[filters, file] for file in files]
