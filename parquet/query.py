@@ -31,6 +31,7 @@ def run_all(f, files, args, kwargs, drop=False):
     :return:
     """
     total = 0
+    drop_caches()
     for j in range(len(queries)):
         q = []
         # Eliminate the non-numerical predicates
