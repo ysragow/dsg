@@ -367,6 +367,19 @@ class PQD:
 
         write(file_path, concat([obj_dict[obj] for obj in objs]).reset_index(drop=True), row_group_offsets=rg_indices)
 
+    @remove_index
+    def file_gen_1b(self, file_path, obj_dict):
+        """
+        Generate a file
+        **This one does not pay attention to row groups and resets the index**
+        Literally just the original file_gen
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
+        """
+        write(file_path, concat(obj_dict.values()))
+        for obj in obj_dict.keys():
+            self.index[obj].append(file_path)
+
     # @remove_index
     def file_gen_2(self, file_path, obj_dict):
         """
