@@ -342,7 +342,7 @@ class PQD:
         """
         # print(list(obj_dict.items()))
 
-        write(file_path, concat(obj_dict.values()))
+        write(file_path, concat(obj_dict.values()).reset_index(drop=True))
         for obj in obj_dict.keys():
             self.index[obj].append(file_path)
 
@@ -365,7 +365,7 @@ class PQD:
             rg_indices.append(total_size)
             total_size += obj_dict[obj].shape[0]
 
-        write(file_path, concat([obj_dict[obj] for obj in objs]), row_group_offsets=rg_indices)
+        write(file_path, concat([obj_dict[obj] for obj in objs]).reset_index(drop=True), row_group_offsets=rg_indices)
 
     # @remove_index
     def file_gen_2(self, file_path, obj_dict):
