@@ -118,6 +118,8 @@ class PNode:
         if verbose:
             print(f"Making preds for node {id} with workload size: {len(self.workload)}", end='\r')
         all_preds = all_predicates_workload(self.table, self.workload)
+        if verbose:
+            print("All preds:", all_preds)
         best_split_len = len(self.workload)
         best_pred = None
         if verbose:
@@ -134,6 +136,8 @@ class PNode:
             if verbose:
                 print(f"Leaving node {id} with workload size: {len(self.workload)}")
             return False  # cannot be split further
+        if verbose:
+            print("Chosen Pred:", best_pred)
         right_wkld, left_wkld, both_wkld = self.workload.split(best_pred, self.boundaries)
         self.left_child = PNode(left_wkld, self.table, self.boundaries + [best_pred.flip()])
         self.right_child = PNode(right_wkld, self.table, self.boundaries + [best_pred])
