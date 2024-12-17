@@ -449,6 +449,8 @@ def num_intersect(preds, debug=False):
                 index[greater].add_smaller(smaller, e)
                 index[smaller].add_greater(greater, e)
         else:
+            if debug:
+                print("Hi hello we got here right")
             if pred.op.symbol == '=':
                 index[pred.column.name].set_min(pred.num, True)
                 index[pred.column.name].set_max(pred.num, True)
