@@ -104,7 +104,7 @@ class Workload:
     def __repr__(self):
         return str(self)
 
-    def split(self, pred, prev_preds):
+    def split(self, pred, prev_preds, verbose=False):
         """
         :param pred: the predicates upon which to split the workload
         :param prev_preds: the previous predicates in this workload
@@ -126,11 +126,19 @@ class Workload:
             #     left_queries.append(query)
             #     left_true = True
             if intersect(query.list_preds() + prev_preds + [pred]):
+                if verbose:
+                    print(f"Intersection of {query.list_preds() + prev_preds + [pred]}: True")
                 right_queries.append(query)
                 right_true = True
+            elif verbose:
+                print(f"Intersection of {query.list_preds() + prev_preds + [pred]}: False")
             if intersect(query.list_preds() + prev_preds + [neg_pred]):
+                if verbose:
+                    print(f"Intersection of {query.list_preds() + prev_preds + [neg_pred]}: True")
                 left_queries.append(query)
                 left_true = True
+            elif verbose:
+                print(f"Intersection of {query.list_preds() + prev_preds + [neg_pred]}: True")
             if right_true & left_true:
                 straddlers.append(query)
             if not (right_true or left_true):

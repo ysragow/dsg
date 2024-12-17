@@ -125,7 +125,7 @@ class PNode:
         if verbose:
             print(f"Testing preds for node {id} with workload size: {len(self.workload)}", end='\r')
         for pred in all_preds:
-            right_wkld, left_wkld, both_wkld = self.workload.split(pred, self.boundaries)
+            right_wkld, left_wkld, both_wkld = self.workload.split(pred, self.boundaries, verbose=verbose2)
             if (len(both_wkld) < best_split_len)\
                     and (len(right_wkld) > 0) \
                     and (len(left_wkld) > 0)\
