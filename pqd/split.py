@@ -107,7 +107,7 @@ class PNode:
     def is_split(self):
         return self.pred is not None
 
-    def split(self, factor=1, verbose=False, id='r'):
+    def split(self, factor=1, verbose=False, verbose2=False, id='r'):
         """
         :param factor: The maximum value of len(both_wkld) / len(self.workload)
         :return: True if the node has been split successfully, false otherwise
@@ -118,8 +118,8 @@ class PNode:
         if verbose:
             print(f"Making preds for node {id} with workload size: {len(self.workload)}", end='\r')
         all_preds = all_predicates_workload(self.table, self.workload)
-        if verbose:
-            print("All preds:", all_preds)
+        # if verbose2:
+        #     print("All preds:", all_preds)
         best_split_len = len(self.workload)
         best_pred = None
         if verbose:
@@ -132,6 +132,8 @@ class PNode:
                     and ((len(both_wkld) / len(self.workload)) < factor):
                 best_split_len = len(both_wkld)
                 best_pred = pred
+            if verbose2:
+                print(f"Score for pred {pred}: {len(both_wkld)}")
         if best_pred is None:
             if verbose:
                 print(f"Leaving node {id} with workload size: {len(self.workload)}")
