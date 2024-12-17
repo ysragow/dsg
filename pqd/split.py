@@ -145,10 +145,10 @@ class PNode:
         self.right_child = PNode(right_wkld, self.table, self.boundaries + [best_pred])
         if verbose:
             print(f"Recursing to right child of size {len(right_wkld)} for node {id} with workload size: {len(self.workload)}")
-        self.right_child.split(factor=factor, verbose=verbose, id=id + '0')
+        self.right_child.split(factor=factor, verbose=verbose, verbose2=verbose2, id=id + '0')
         if verbose:
             print(f"Recursing to left child of size {len(left_wkld)} for node {id} with workload size: {len(self.workload)}")
-        self.left_child.split(factor=factor, verbose=verbose, id=id + '1')
+        self.left_child.split(factor=factor, verbose=verbose, verbose2=verbose2, id=id + '1')
         self.pred = best_pred
         return True
 
