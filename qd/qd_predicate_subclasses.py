@@ -294,6 +294,7 @@ class ColumnNode:
         # Linked list attributes
         self.left = None
         self.right = None
+        self.debug = debug
 
         # Graph node attributes
         # self.greater: a dictionary mapping columns greater than
@@ -376,6 +377,8 @@ class ColumnNode:
         if n < self.min:
             self.min = n
             self.min_e = e
+            if self.debug:
+                print(f"Setting {n} as min")
         elif (n == self.min) and (not e):
             self.min_e = False
         
@@ -383,6 +386,8 @@ class ColumnNode:
         if n > self.max:
             self.max = n
             self.max_e = e
+            if self.debug:
+                print(f"Setting {n} as max")
         elif (n == self.max) and (not e):
             self.max_e = False
 
