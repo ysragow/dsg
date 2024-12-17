@@ -544,6 +544,8 @@ def num_intersect(preds, debug=False):
     # It's over.  Breathe.  Check if things match.
     for col in index.keys():
         c = index[col]
+        if debug:
+            print(f"{c.min} {'<=' if c.min_e else '<'} {col} {'<=' if c.max_e else '<'} {c.max}")
         if c.min > c.max:
             if debug:
                 print(f"Column {col} is constrained to have a max of {c.max} and a min of {c.min}")
