@@ -18,12 +18,12 @@ def read_pq(file, filters=None):
     """
     if scan_param == 'rg':
         pf = ParquetFile(file)
-        return pf.to_pandas(filters=filters, row_filter=False, columns=pf.columns)
+        return pf.to_pandas(filters=filters, row_filter=False, columns=pf.columns, index=False)
     elif (scan_param == 'pure') or (scan_param is True):
         if read == 'pyarrow':
             return parquet.read_table(file)
         elif read == 'fastparquet':
-            return ParquetFile(file).to_pandas()
+            return ParquetFile(file).to_pandas(index=False)
     elif (scan_param is None) or (scan_param is False):
         if read == 'pyarrow':
             return parquet.read_table(file, filters=filters)
