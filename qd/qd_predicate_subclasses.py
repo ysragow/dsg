@@ -572,7 +572,7 @@ def pred_gen(pred_string, table):
     # print(pred_string)
     col_name, op_name, value_name = pred_string.split(" ", 2)
     column = table.get_column(col_name)
-    assert column is not None, "The column " + col_name + " does not exist in this table."
+    assert column is not None, "The column " + col_name + " does not exist in the table at " + table.path
     op = Operator(op_name)
     if table.get_column(value_name):
         # Instance of a comparative predicate
