@@ -374,6 +374,8 @@ class ColumnNode:
         return True
 
     def set_min(self, n, e):
+        if self.debug:
+            print(f"Attempting to set {n} as min")
         if n < self.min:
             self.min = n
             self.min_e = e
@@ -383,6 +385,8 @@ class ColumnNode:
             self.min_e = False
         
     def set_max(self, n, e):
+        if self.debug:
+            print(f"Attempting to set {n} as max")
         if n > self.max:
             self.max = n
             self.max_e = e
@@ -449,8 +453,8 @@ def num_intersect(preds, debug=False):
                 index[greater].add_smaller(smaller, e)
                 index[smaller].add_greater(greater, e)
         else:
-            if debug:
-                print("Hi hello we got here right")
+            # if debug:
+            #     print("Hi hello we got here right")
             if pred.op.symbol == '=':
                 index[pred.column.name].set_min(pred.num, True)
                 index[pred.column.name].set_max(pred.num, True)
