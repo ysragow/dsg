@@ -365,6 +365,8 @@ class PQD:
             rg_indices.append(total_size)
             total_size += obj_dict[obj].shape[0]
 
+        print(f"Row Group Indices for {file_path}:", rg_indices)
+
         write(file_path, concat([obj_dict[obj] for obj in objs]), row_group_offsets=rg_indices)
 
     @remove_index
