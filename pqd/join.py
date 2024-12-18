@@ -218,7 +218,7 @@ class PQD:
                         npq_dict[obj_2].add(q)
 
             # Add more objects
-            while total_size <= self.abstract_block_size:
+            while total_size < self.abstract_block_size:
                 # Get the new object and remove it from size_llist
                 active_files = list([obj_2 for obj_2 in size_llist])
                 if len(active_files) == 0:
