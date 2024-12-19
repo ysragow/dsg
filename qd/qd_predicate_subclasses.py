@@ -373,15 +373,28 @@ class ColumnNode:
                     self.smaller[c] = other.smaller[c]
         return True
 
+    # def set_min(self, n, e):
+    #     if n >= self.min:
+    #         self.min = n
+    #         self.min_e = e & (self.min_e | (n > self.min))
+    #
+    # def set_max(self, n, e):
+    #     if n <= self.max:
+    #         self.max = n
+    #         self.max_e = e & (self.max_e | (n < self.max))
     def set_min(self, n, e):
-        if n >= self.min:
+        if n > self.min:
             self.min = n
-            self.min_e = e & (self.min_e | (n > self.min))
-        
+            self.min_e = e
+        elif n == self.min:
+            self.min_e &= e
+
     def set_max(self, n, e):
         if n <= self.max:
             self.max = n
-            self.max_e = e & (self.max_e | (n < self.max))
+            self.max_e = e
+        elif n == self.max:
+            self.max_e &= e
 
     def add_greater(self, c, e):
         self.greater[c] = e
