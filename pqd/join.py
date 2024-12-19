@@ -565,7 +565,7 @@ class PQD:
                 best_slps = {}  # Best Ordering object for each signature
                 for slp in old_slps:
                     for obj in slp.remainder:
-                        new_ordering = Ordering(slp, obj)
+                        new_ordering = Ordering(obj, slp)
                         if new_ordering.sig in best_slps:
                             if best_slps[new_ordering.sig].score > new_ordering.score:
                                 best_slps[new_ordering.sig] = new_ordering
