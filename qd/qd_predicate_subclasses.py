@@ -401,10 +401,12 @@ class ColumnNode:
     def set_max(self, n, e):
         old_max = self.max
         old_e = self.max_e
+        new_max = old_max
+        new_e = old_e
 
         if n <= self.max:
-            old_max = n
-            old_e = e & (self.max_e | (n < self.max))
+            new_max = n
+            new_e = e & (self.max_e | (n < self.max))
 
         if n <= self.max:
             self.max = n
@@ -412,8 +414,8 @@ class ColumnNode:
         elif n == self.max:
             self.max_e &= e
 
-        assert old_e == self.max_e, "They are different"
-        assert old_max == self.max, "They are different"
+        assert new_e == self.max_e, f"They are different in case: [max: {old_max}, old_e: {old_e}, n: {n}, e: {e}"
+        assert new_max == self.max, f"They are different in case: [max: {old_max}, old_e: {old_e}, n: {n}, e: {e}"
 
     def add_greater(self, c, e):
         self.greater[c] = e
