@@ -408,7 +408,7 @@ class ColumnNode:
             new_max = n
             new_e = e & (self.max_e | (n < self.max))
 
-        if n <= self.max:
+        if n < self.max:
             self.max = n
             self.max_e = e
         elif n == self.max:
