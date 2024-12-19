@@ -385,15 +385,15 @@ class ColumnNode:
     def set_min(self, n, e):
         # old_min = self.min
         # old_e = self.min_e
-        # if n >= self.min:
-        #     old_min = n
-        #     old_e = e & (self.min_e | (n > self.min))
+        if n >= self.min:
+            old_min = n
+            old_e = e & (self.min_e | (n > self.min))
 
-        if n > self.min:
-            self.min = n
-            self.min_e = e
-        elif n == self.min:
-            self.min_e &= e
+        # if n > self.min:
+        #     self.min = n
+        #     self.min_e = e
+        # elif n == self.min:
+        #     self.min_e &= e
 
         # assert old_e == self.min_e, "They are different"
         # assert old_min == self.min, "They are different"
