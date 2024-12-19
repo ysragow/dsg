@@ -584,5 +584,5 @@ class PQD:
                     opt_order = ordering.ordering
 
         ordered_chunks = list([obj_dict[obj] for obj in opt_order])
-        parquet.write_table(Table.from_pandas(concat(ordered_chunks)), file_path, row_group_size=self.rg_size)
+        pq.write_table(Table.from_pandas(concat(ordered_chunks)), file_path, row_group_size=self.rg_size)
 
