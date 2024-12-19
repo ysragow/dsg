@@ -3,10 +3,50 @@ from qd.qd_algorithms import index, table_gen
 from qd.qd_query import Query
 from numpy import argsort as np_argsort
 from fastparquet import ParquetFile, write
-from pyarrow import parquet as pq
+from pyarrow import parquet as pq, Table
 from pandas import concat
 from json import dump
 import os
+
+
+def list_sig(l):
+    k = list(l)
+    k.sort()
+    return tuple(k)
+
+
+def factors(n):
+    # Get all factors of a number n
+    # Start by getting prime factorization
+    primes = {} # one plus the number of times each prime appears in the prime factorization
+    i = 2
+    assert n > 0, "n needs to be greater than 0"
+    assert n == int(n), "n needs to be an integer"
+    while n != 1:
+        if (i * (n // i)) == n:
+            n = n // i
+            primes[i] = primes.get(i, 1) + 1
+        else:
+            i += 1
+
+    all_primes = list(primes.keys())
+    # Set up the assignment process
+    num_factors = 1
+    p_switches = {}
+
+    for p in all_primes:
+        p_switches[p] = num_factors
+        num_factors *= primes[p]
+
+    # Get every factor
+    output = []
+    for i in range(num_factors):
+        new_num = 1
+        for p in all_primes:
+            for _ in range((i // p_switches[p]) % primes[p]):
+                new_num *= p
+        output.append(new_num)
+    return output
 
 
 class LList:
@@ -105,7 +145,7 @@ def remove_index(func):
 
 
 class PQD:
-    def __init__(self, root_path, table, workload, block_size, split_factor):
+    def __init__(self, root_path, table, workload, block_size, split_factor, row_group_size=1000000, dp_factor=100):
         """
         Initialize a PQD layout
         :param root_path: path to the root file, regardless of whether it exists
@@ -113,6 +153,8 @@ class PQD:
         :param workload: The workload upon which we will be creating this
         :param block_size: The block size (block_size <= # of rows per file <= 2 * block size)
         :param split_factor: How many ways to split the data
+        :param row_group_size: Size of row groups that the data is made into
+        :param dp_factor: Granularity of the dynamic programming by row count in file_gen_3
         """
 
         # Save relevant stuff
@@ -122,6 +164,13 @@ class PQD:
         self.path = '/'.join(split_path[:-1])
         self.split_factor = split_factor
         self.workload = workload
+
+        # For file_gen_3
+        self.rg_size = row_group_size
+        self.dp_factor = dp_factor
+        self.rg_factors = argsort(factors(self.rg_size), lambda x: (self.rg_size - x)) # Contains every factor of the rg size
+        self.opt_arrangements = {} # The optimal arrangement of a given set of objs within a file, so it doesn't have to be computed multiple times
+
         self.files = None  # This will change when we successfully run one of the "make_files" functions
         self.layout = None  # This will change when we successfully run one of the "make_layout" functions
         # self.file_dict = None # This will change when we successfully run one of the "make_layout" functions
@@ -382,7 +431,7 @@ class PQD:
         for obj in obj_dict.keys():
             self.index[obj].append(file_path)
 
-    # @remove_index
+    @remove_index
     def file_gen_2(self, file_path, obj_dict):
         """
         Generate a file
@@ -405,8 +454,135 @@ class PQD:
 
 
 
+        # repeated knn clustering!!!
 
+        changed = False
 
+        while not changed:
+            pass
 
+        # TODO: Finish this?
 
+    @remove_index
+    def file_gen_3a(self, file_path, obj_dict):
+        """
+        Generate a file
+        **This one adds another column for ease of row group skipping**
+        How it works
+        - Try every ordering of the file chunks and see which one has queries accessing the fewest row groups
+        - How to do efficiently?  Dynamic programming on every possible subset!
+        - Make files in the optimal ordering
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
+        """
+
+        objs = list(obj_dict.keys())
+        llist_objs = LList(objs)
+        total_size = 0
+        min_obj_size = 0
+        all_qs = set() # The set of all queries present here
+        num_rg = -((-total_size) // self.rg_size)
+
+        for obj in objs:
+            obj_size = obj_dict[obj].shape[0]
+            total_size += obj_dict[obj].shape[0]
+            if obj_size > 0:
+                self.index[obj].append(file_path)
+                for q in self.table_q_dict[obj]:
+                    all_qs.add(q)
+                if min_obj_size == 0:
+                    min_obj_size = obj_size
+                else:
+                    min_obj_size = min(min_obj_size, obj_size)
+            else:
+                # We don't care about objects of size 0
+                llist_objs.remove(obj)
+
+        # If the list is truly empty, then don't write anything at all
+        if len(llist_objs) == 0:
+            return
+
+        # If a layout for these files already exists, use that one instead of calculating a new one
+        objs_sig = list_sig(llist_objs)
+        if objs_sig in self.opt_arrangements:
+            opt_order = self.opt_arrangements[objs_sig]
+        else:
+            # Otherwise, run this n^2 * 2^n time algorithm.  Start by initializing the new and old subsets/last pairs
+            # SLP = subset/last pair: a tuple ((objs in a subset), last objs)
+            max_score = num_rg * len(all_qs)
+
+            # q_dict = dict([(key, set(self.table_q_dict[key])) for key in self.table_q_dict.keys()])
+            q_dict = self.table_q_dict
+            rg_size = self.rg_size
+
+            class Ordering:
+                def __init__(self, next, prev=None):
+                    if prev is None:
+                        self.ordering = []
+                        self.remainder = set(llist_objs)
+                        self.sig = ()
+                        self.last = None
+                        self.score = 0
+                        self.size = 0
+                        self.last_rg_queries = set()
+                        return
+                    self.last = next
+
+                    # Initialize the ordering and signature
+                    self.ordering = prev.ordering.copy()
+                    self.ordering.append(self.last)
+                    self.sig = (list_sig(self.ordering), self.last)
+
+                    # Initialize the remainder
+                    self.remainder = prev.remainder.copy()
+                    self.remainder.remove(self.last)
+
+                    # Initialize the size
+                    self.size = prev.size + obj_dict[next].shape[0]
+
+                    # Initialize the score
+                    self.score = prev.score
+                    next_qs = q_dict[self.last]
+                    self.last_rg_queries = set()
+
+                    # Account for score accrued through new queries in the current row group
+                    if prev.size % rg_size != 0:
+                        self.last_rg_queries = prev.last_rg_queries.copy()
+                        for q in next_qs:
+                            if q not in self.last_rg_queries:
+                                self.last_rg_queries.add(q)
+                                self.score += 1
+
+                    # Account for score accrued through making new row groups
+                    new_rgs = (self.size // rg_size) - (prev.size // rg_size)
+                    if new_rgs > 0:
+                        self.score += new_rgs * len(next_qs)
+                        self.last_rg_queries = set(next_qs)
+
+            old_slps = [Ordering(None, None)]
+
+            for _ in range(len(llist_objs)):
+                best_slps = {}  # Best Ordering object for each signature
+                for slp in old_slps:
+                    for obj in slp.remainder:
+                        new_ordering = Ordering(slp, obj)
+                        if new_ordering.sig in best_slps:
+                            if best_slps[new_ordering.sig].score > new_ordering.score:
+                                best_slps[new_ordering.sig] = new_ordering
+                            else:
+                                del new_ordering
+                        else:
+                            best_slps[new_ordering.sig] = new_ordering
+                old_slps = best_slps.values()
+
+            assert len(old_slps) == (len(llist_objs)), "Something went wrong somewhere"
+
+            best_score = max_score
+            opt_order = list(llist_objs)
+            for ordering in old_slps:
+                if ordering.score < best_score:
+                    opt_order = ordering.ordering
+
+        ordered_chunks = list([obj_dict[obj] for obj in opt_order])
+        parquet.write_table(Table.from_pandas(concat(ordered_chunks)), file_path, row_group_size=self.rg_size)
 
