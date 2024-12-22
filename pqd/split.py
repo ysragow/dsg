@@ -236,7 +236,7 @@ class PNode:
 
     def statistics(self):
         if self.pred is None:
-            size = len(self.workload)
+            size = self.wkld_size
             return {'max': size, 'min': size, 'average': size, 'depth': 1, 'leaves': 1}
         else:
             left_stats = self.left_child.statistics()
