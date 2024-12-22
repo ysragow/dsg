@@ -88,6 +88,16 @@ class PNode:
         :param blocks: A dictionary mapping query indices in workload.queries to BigColumnBlocks
         :param tree: You can initialize this from a tree, as well
         """
+        self.workload = workload
+        self.table = table
+        if tree is not None:
+            if len(tree) != 0:
+                pred = pred_gen(tree[0], table)
+                self.right_child = PNode(workload, table, tree=tree[1])
+                self.left_child = PNode(workload, table, tree=tree[2])
+                self.pred = pred
+                return
+
         if blocks is None:
             self.blocks = {}
             self.blocks = {}
@@ -110,15 +120,6 @@ class PNode:
             self.valid_queries = list(blocks.keys())
 
         self.wkld_size = len(self.valid_queries)
-        self.workload = workload
-        self.table = table
-        if tree is not None:
-            if len(tree) != 0:
-                pred = pred_gen(tree[0], table)
-                self.right_child = PNode(workload, table, tree=tree[1])
-                self.left_child = PNode(workload, table, tree=tree[2])
-                self.pred = pred
-                return
         self.left_child = None
         self.right_child = None
         self.pred = None
@@ -172,7 +173,7 @@ class PNode:
                 print(f"Score for pred {pred}: {score}")
         if best_pred is None:
             if verbose:
-                print(f"Leaving node {id} with workload size: {len(self.workload)}")
+                print(f"Leaving node {id} with workload size: {self.wkld_size}")
             return False  # cannot be split further
         if verbose:
             print("Chosen Pred:", best_pred)
