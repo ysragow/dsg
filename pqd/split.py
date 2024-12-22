@@ -197,12 +197,14 @@ class PNode:
                 left_blocks[i] = block
         self.left_child = PNode(self.workload, self.table, left_blocks)
         self.right_child = PNode(self.workload, self.table, right_blocks)
+        # Gotta test some new ideas... maybe change the factor?
+
         if verbose:
             print(f"Recursing to right child of size {self.right_child.wkld_size} for node {id} with workload size: {self.wkld_size}")
-        self.right_child.split(factor=factor, verbose=verbose, verbose2=verbose2, id=id + '0')
+        self.right_child.split(factor=10/len(id), verbose=verbose, verbose2=verbose2, id=id + '0')
         if verbose:
             print(f"Recursing to left child of size {self.left_child.wkld_size} for node {id} with workload size: {self.wkld_size}")
-        self.left_child.split(factor=factor, verbose=verbose, verbose2=verbose2, id=id + '1')
+        self.left_child.split(factor=10/len(id), verbose=verbose, verbose2=verbose2, id=id + '1')
         self.pred = best_pred
         return True
 
