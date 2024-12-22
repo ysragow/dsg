@@ -195,8 +195,8 @@ class PNode:
             elif left_test:
                 block.add(best_pred.flip())
                 left_blocks[i] = block
-        self.left_child = PNode(left_wkld, self.table, left_blocks)
-        self.right_child = PNode(right_wkld, self.table, right_blocks)
+        self.left_child = PNode(self.workload, self.table, left_blocks)
+        self.right_child = PNode(self.workload, self.table, right_blocks)
         if verbose:
             print(f"Recursing to right child of size {self.right_child.wkld_size} for node {id} with workload size: {self.wkld_size}")
         self.right_child.split(factor=factor, verbose=verbose, verbose2=verbose2, id=id + '0')
