@@ -850,7 +850,7 @@ class ColumnNode:
         changed = False
         if n > self.min:
             self.min = n
-            self.min_e = e & (self.min_e | (n > self.min))
+            self.min_e = e
             changed = True
         elif (n == self.min) and (self.min_e != (self.min_e & e)):
             self.min_e = self.min_e & e
@@ -879,7 +879,7 @@ class ColumnNode:
         changed = False
         if n < self.max:
             self.max = n
-            self.max_e = e & (self.max_e | (n > self.max))
+            self.max_e = e
             changed = True
         elif (n == self.max) and (self.max_e != (self.max_e & e)):
             self.max_e = self.max_e & e
