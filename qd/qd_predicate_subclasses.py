@@ -310,7 +310,7 @@ class BigColumnBlock:
             else:
                 return self.num_block.test(pred, debug=debug)
         else:
-            cat_intersect(self.cat_preds + [pred])
+            return cat_intersect(self.cat_preds + [pred])
 
     def add(self, pred, debug=False):
         if pred.column.numerical:
