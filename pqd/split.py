@@ -1,6 +1,6 @@
 from qd.qd_table import table_gen, Table
 from qd.qd_algorithms import reset
-from qd.qd_predicate_subclasses import intersect, NumComparative, Categorical, Numerical, pred_gen
+from qd.qd_predicate_subclasses import intersect, NumComparative, Categorical, Numerical, pred_gen, BigColumnBlock
 from qd.qd_query import Workload
 from qd.qd_predicate import Operator
 from qd.qd_node import Root, Node
@@ -80,24 +80,43 @@ class PNode:
     """
     A node containing a workload.  Its main function is to split and output a tree
     """
-    def __init__(self, workload, table, boundaries=None, tree=None):
+    def __init__(self, workload, table, blocks=None, tree=None):
         """
         Create a PNode object
         :param workload: The workload at this node
         :param table: A table object
-        :param boundaries: A list of predicates beyond the table mins and maxes which bound this node
+        :param blocks: A dictionary mapping query indices in workload.queries to BigColumnBlocks
         :param tree: You can initialize this from a tree, as well
         """
-        if boundaries is None:
-            boundaries = []
+        if blocks is None:
+            self.blocks = {}
+            self.blocks = {}
+            self.valid_queries = []
+            for i in range(len(workload.queries)):
+                q = workload.queries[i]
+                block = BigColumnBlock()
+                valid_query = True
+                for p in q.list_preds():
+                    try:
+                        block.add(p)
+                    except AssertionError:
+                        valid_query = False
+                        break
+                if valid_query:
+                    self.valid_queries.append(i)
+                    self.blocks[i] = block
+        else:
+            self.blocks = blocks
+            self.valid_queries = list(blocks.keys())
+
+        self.wkld_size = len(self.valid_queries)
         self.workload = workload
         self.table = table
-        self.boundaries = boundaries
         if tree is not None:
             if len(tree) != 0:
                 pred = pred_gen(tree[0], table)
-                self.right_child = PNode(workload, table, boundaries=boundaries + [pred], tree=tree[1])
-                self.left_child = PNode(workload, table, boundaries=boundaries + [pred.flip], tree=tree[2])
+                self.right_child = PNode(workload, table, tree=tree[1])
+                self.left_child = PNode(workload, table, tree=tree[2])
                 self.pred = pred
                 return
         self.left_child = None
@@ -125,29 +144,64 @@ class PNode:
         if verbose:
             print(f"Testing preds for node {id} with workload size: {len(self.workload)}", end='\r')
         for pred in all_preds:
-            right_wkld, left_wkld, both_wkld = self.workload.split(pred, self.boundaries, verbose=verbose2)
-            if (len(both_wkld) < best_split_len)\
-                    and (len(right_wkld) > 0) \
-                    and (len(left_wkld) > 0)\
-                    and ((len(both_wkld) / len(self.workload)) < factor):
-                best_split_len = len(both_wkld)
+            # right_wkld, left_wkld, both_wkld = self.workload.split(pred, self.boundaries, verbose=verbose2)
+            # if (len(both_wkld) < best_split_len)\
+            #         and (len(right_wkld) > 0) \
+            #         and (len(left_wkld) > 0)\
+            #         and ((len(both_wkld) / len(self.workload)) < factor):
+            #     best_split_len = len(both_wkld)
+            #     best_pred = pred
+            left_side_valid = False
+            right_side_valid = False
+            score = 0
+            for i in self.valid_queries:
+                right_test = self.blocks[i].test(pred)
+                left_test = self.blocks[i].test(pred.flip())
+                if right_test & left_test:
+                    score += 1
+                    right_side_valid = True
+                    left_side_valid = True
+                elif right_test:
+                    right_side_valid = True
+                elif left_test:
+                    left_side_valid = True
+            if (score < best_split_len) & left_side_valid & right_side_valid & ((score / self.wkld_size) < factor):
                 best_pred = pred
+                best_split_len = score
             if verbose2:
-                print(f"Score for pred {pred}: {len(both_wkld)}")
+                print(f"Score for pred {pred}: {score}")
         if best_pred is None:
             if verbose:
                 print(f"Leaving node {id} with workload size: {len(self.workload)}")
             return False  # cannot be split further
         if verbose:
             print("Chosen Pred:", best_pred)
-        right_wkld, left_wkld, both_wkld = self.workload.split(best_pred, self.boundaries)
-        self.left_child = PNode(left_wkld, self.table, self.boundaries + [best_pred.flip()])
-        self.right_child = PNode(right_wkld, self.table, self.boundaries + [best_pred])
+        # right_wkld, left_wkld, both_wkld = self.workload.split(best_pred, self.boundaries)
+
+        # Make the new blocks
+        right_blocks = {}
+        left_blocks = {}
+        for i in self.valid_queries:
+            block = self.blocks[i]
+            right_test = block.test(best_pred)
+            left_test = block.test(best_pred.flip())
+            if right_test & left_test:
+                right_blocks[i] = block.fork(best_pred)
+                block.add(best_pred.flip())
+                left_blocks[i] = block
+            elif right_test:
+                block.add(best_pred)
+                right_blocks[i] = block
+            elif left_test:
+                block.add(best_pred.flip())
+                left_blocks[i] = block
+        self.left_child = PNode(left_wkld, self.table, left_blocks)
+        self.right_child = PNode(right_wkld, self.table, right_blocks)
         if verbose:
-            print(f"Recursing to right child of size {len(right_wkld)} for node {id} with workload size: {len(self.workload)}")
+            print(f"Recursing to right child of size {self.right_child.wkld_size} for node {id} with workload size: {self.wkld_size}")
         self.right_child.split(factor=factor, verbose=verbose, verbose2=verbose2, id=id + '0')
         if verbose:
-            print(f"Recursing to left child of size {len(left_wkld)} for node {id} with workload size: {len(self.workload)}")
+            print(f"Recursing to left child of size {self.left_child.wkld_size} for node {id} with workload size: {self.wkld_size}")
         self.left_child.split(factor=factor, verbose=verbose, verbose2=verbose2, id=id + '1')
         self.pred = best_pred
         return True

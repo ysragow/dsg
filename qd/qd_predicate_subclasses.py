@@ -219,22 +219,28 @@ class NumComparative(Predicate):
 
 
 def intersect(preds, debug=False):
-    date_preds = []
-    num_preds = []
-    cat_preds = []
+    block = BigColumnBlock()
     for pred in preds:
-        if pred.column.numerical:
-            if pred.column.ctype == 'DATE':
-                date_preds.append(pred)
-            else:
-                num_preds.append(pred)
-        else:
-            cat_preds.append(pred)
-    if debug:
-        print("Categoricals:", cat_intersect(cat_preds, debug))
-        print("Dates:", num_intersect(date_preds, debug))
-        print("Numbers:", num_intersect(num_preds, debug))
-    return cat_intersect(cat_preds) & num_intersect(date_preds) & num_intersect(num_preds)
+        if not block.test(pred):
+            return False
+        block.add(pred)
+    return True
+    # date_preds = []
+    # num_preds = []
+    # cat_preds = []
+    # for pred in preds:
+    #     if pred.column.numerical:
+    #         if pred.column.ctype == 'DATE':
+    #             date_preds.append(pred)
+    #         else:
+    #             num_preds.append(pred)
+    #     else:
+    #         cat_preds.append(pred)
+    # if debug:
+    #     print("Categoricals:", cat_intersect(cat_preds, debug))
+    #     print("Dates:", num_intersect(date_preds, debug))
+    #     print("Numbers:", num_intersect(num_preds, debug))
+    # return cat_intersect(cat_preds) & num_intersect(date_preds) & num_intersect(num_preds)
 
 
 def cat_intersect(preds, debug=False):
@@ -275,6 +281,380 @@ def cat_intersect(preds, debug=False):
                 print(f"Column {column} cannot take on any value")
             return False
     return True
+
+
+class BigColumnBlock:
+    """
+    Handles the three categories: dates, integers, and categories
+    """
+    def __init__(self, debug=False):
+        self.date_block = ColumnBlock(debug=debug)
+        self.num_block = ColumnBlock(debug=debug)
+        self.cat_preds = []
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return 'Dates:\n' + str(self.date_block) + '\n\nNumbers:\n' + str(self.num_block) + '\n\nCategories:\n' + str(self.cat_preds)
+
+    def test(self, pred, debug=False):
+        """
+        Test whether adding a pred makes the block unsatisfiable
+        :param pred: a pred
+        :return: Whether all the preds in this block, plus the new bred, can be satisfied
+        """
+        if pred.column.numerical:
+            if pred.column.ctype == 'DATE':
+                return self.date_block.test(pred, debug=debug)
+            else:
+                return self.num_block.test(pred, debug=debug)
+        else:
+            cat_intersect(self.cat_preds + [pred])
+
+    def add(self, pred, debug=False):
+        if pred.column.numerical:
+            if pred.column.ctype == 'DATE':
+                self.date_block.add(pred, debug=debug)
+            else:
+                self.num_block.add(pred, debug=debug)
+        else:
+            self.cat_preds.append(pred)
+
+    def fork(self, new_pred):
+        """
+        Add a new pred and return a copy
+        :param new_pred: a predicate
+        :return: A new BigColumnBlock object containing all of this block's predicates, and the new pred
+        """
+        output = BigColumnBlock()
+        output.add(new_pred)
+        for pred in (self.cat_preds + self.date_block.preds + self.num_block.preds):
+            output.add(pred)
+        return output
+
+
+def find_cycle(graph, debug=False):
+    '''
+    Find a cycle in a graph
+    :param graph: A dictionary mapping a node names to names of nodes they lead to
+    :return: A list of nodes that form a cycle, otherwise None
+    '''
+    all_nodes = list(graph.keys())
+
+    # Perform DFS
+    never_found_nodes = set(all_nodes)
+    once_found_nodes = set()
+    useless_nodes = set()
+    while len(never_found_nodes) > 0:
+        node = list(never_found_nodes)[0]
+        cycle = cycle_dfs(node, graph, once_found_nodes, never_found_nodes, useless_nodes, debug=debug)
+        if cycle is not None:
+            cycle.reverse()
+            return cycle[:-1]
+    return None
+
+
+def kosaraju(graph, root_key=True):
+    """
+    Use Kosaraju's algorithm to get the strongly connected components of the graph
+    :param graph: A graph
+    :param root_key: Whether the roots are the keys of the output, or if every node maps to a root
+    :return: the strongly connected components of the graph
+    """
+    # Initialize terms for the functions
+    output = {}
+    visited = set()
+    assigned = set()
+    inv_graph = {}
+    all_nodes = list(graph.keys())
+    for node in all_nodes:
+        inv_graph[node] = []
+    L = []
+
+    def visit(u):
+        if u not in visited:
+            visited.add(u)
+            for v in graph[u]:
+                visit(v)
+            L.append(u)
+
+    if root_key:
+        def assign(u, root):
+            if u not in assigned:
+                assigned.add(u)
+                output[root].add(u)
+                for v in inv_graph[u]:
+                    assign(v, root)
+    else:
+        def assign(u, root):
+            if u not in assigned:
+                assigned.add(u)
+                output[u] = root
+                for v in inv_graph[u]:
+                    assign(v, root)
+
+    for node in all_nodes:
+        visit(node)
+        for out_node in graph[node]:
+            inv_graph[out_node].append(node)
+
+    L.reverse()
+
+    for node in L:
+        if node not in assigned:
+            if root_key:
+                output[node] = set()
+            assign(node, node)
+
+    return output
+
+
+
+def cycle_dfs(node, graph, once_found_nodes, never_found_nodes, useless_nodes, found_nodes=None, debug=False):
+    """
+    Perform one step of DFS for finding cycles
+    :param node: A node in the graph that we are currently operating on
+    :param graph: A graph
+    :param never_found_nodes: The set of nodes that has never been seen by BFS
+    :param once_found_nodes: The set of known that has been seen by BFS
+    :param useless_nodes: The set of nodes known to not lead to cycles
+    :param found_nodes: The set of nodes that have been found in this depth specifically
+    :return: Empty list if dead end
+    """
+    if found_nodes is None:
+        found_nodes = set()
+    if node in found_nodes:
+        return [node]
+    elif node in useless_nodes:
+        return None
+    else:
+        found_nodes.add(node)
+        once_found_nodes.add(node)
+        if node in never_found_nodes:
+            never_found_nodes.remove(node)
+        for new_node in graph[node]:
+            cycle = cycle_dfs(new_node, graph, once_found_nodes, never_found_nodes, useless_nodes, found_nodes=found_nodes.copy(), debug=debug)
+            if cycle is not None:
+                if (cycle[0] == cycle[-1]) and (len(cycle) > 1):
+                    return cycle
+                else:
+                    cycle.append(node)
+                    return cycle
+    useless_nodes.add(node)
+    return None
+
+
+class ColumnBlock:
+    """
+    A set of ColumnNodes.  Used for long-term storage of bounds
+    """
+    def __init__(self, debug=False):
+        self.col_index = {}
+        self.preds = []
+        self.comps = [] # List of tuples corresponding to node comparisons.  For example (a, b, True) means a >= b
+        self.graph, self.edge_map = self.make_graph(include_edge_map=True)
+
+    def __str__(self):
+        return '\n'.join([str(node) for node in self.get_cnodes()])
+
+    def get_cnodes(self):
+        # Get all column nodes that have not been eliminated
+        cols = []
+        found_cols = set()
+        for col in self.col_index.keys():
+            real_col = self.col_index[col].name
+            if real_col not in found_cols:
+                found_cols.add(real_col)
+                cols.append(real_col)
+        return list([self.col_index[col] for col in cols])
+
+    def make_graph(self, pred=None, ascending=True, include_edge_map=False):
+        """
+        Make a graph out of the ColumnNodes in this block
+        :param pred: An extra pred to add in.  For testing preds.
+        :param ascending: If true, then a -> b implies a <= b.  If false, then a -> b implies a >= b.
+        :return: A dictionary mapping nodes to the nodes they have an edge to, and an edge map mapping nodes to dictionaries for whether the edge includes equality
+        """
+        # Make graph without pred
+        graph = {}
+        edge_map = {}
+        for cnode in self.get_cnodes():
+            node_dict = cnode.greater if ascending else cnode.smaller
+            node_map = {} # Edge map for this node
+            node_list = []
+            for col in node_dict.keys():
+                name = self.col_index[col].name
+                if name not in node_map:
+                    node_map[name] = node_dict[col]
+                    node_list.append(name)
+                else:
+                    node_map[name] &= node_dict[col]
+            graph[cnode.name] = node_list
+            edge_map[cnode.name] = node_map
+
+        # Add in pred
+        if pred is not None:
+            assert pred.comparative, "What is a non-comparative predicate doing in my graph???"
+            assert pred.op.symbol in ('>=', '<=', '<', '>'), "No equalities here.  Not dealing with that"
+            edge_e = pred.op.symbol in ('>=', '<=')
+            name1 = self.col_index[pred.column.name].name
+            name2 = self.col_index[pred.col2.name].name
+            if (pred.op.symbol in ('<=', '<')) == ascending:
+                if name2 not in edge_map[name1]:
+                    graph[name1].append(name2)
+                    edge_map[name1][name2] = edge_e
+            else:
+                if name1 not in edge_map[name2]:
+                    graph[name2].append(name1)
+                    edge_map[name2][name1] = edge_e
+
+        if include_edge_map:
+            return graph, edge_map
+        else:
+            return graph
+
+    def test(self, pred, debug=False):
+        """
+        Test whether a pred contradicts the rest of the block
+        :param pred: a new pred
+        :param debug: debug
+        :return: Whether the new pred contradicts the block
+        """
+        edge_e = pred.op.symbol in ('>=', '<=')
+        if pred.comparative:
+            # Deal with unseen nodes
+            unseen_1 = pred.column.name not in self.col_index
+            unseen_2 = pred.col2.name not in self.col_index
+            if unseen_1 and unseen_2:
+                if pred.op.symbol in ('>', '>='):
+                    return pred.op(pred.column.max, pred.col2.min)
+                else:
+                    return pred.op(pred.column.min, pred.col2.max)
+            if unseen_1 or unseen_2:
+                if unseen_1:
+                    unseen = pred.column
+                    seen = pred.col2
+                else:
+                    unseen = pred.col2
+                    seen = pred.column
+                node = self.col_index[seen.name]
+                if unseen_1 ^ (pred.op.symbol in ('>', '>=')):
+                    return node.test_min(unseen.min, edge_e, debug=debug)
+                else:
+                    return node.test_max(unseen.max, edge_e, debug=debug)
+
+            # Check for the case where the nodes are the same
+            if self.col_index[pred.column.name].name == self.col_index[pred.col2.name].name:
+                return edge_e
+
+            # See if the graph (plus the pred) has a cycle containing an < or > edge
+            graph, edge_map = self.make_graph(pred=pred, include_edge_map=True)
+            conn_map = kosaraju(graph, root_key=False)
+            if debug:
+                print("Connection Map with pred:", conn_map)
+                print("Graph with pred:", graph)
+                print("Edge map with pred:", edge_map)
+            for node in graph.keys():
+                for out_node in graph[node]:
+                    if not edge_map[node][out_node]:
+                        if conn_map[node] == conn_map[out_node]:
+                            if debug:
+                                print(f"Column {node} is constrained to be strictly less than column {out_node}, which is impossible.")
+                            return False
+
+            # Assert the new bounds enacted by this comparative pred
+            if pred.op.symbol in ('>', '>='):
+                greater_node = self.col_index[pred.column.name]
+                smaller_node = self.col_index[pred.col2.name]
+            else:
+                smaller_node = self.col_index[pred.column.name]
+                greater_node = self.col_index[pred.col2.name]
+            if not greater_node.test_min(smaller_node.min, edge_e & smaller_node.min_e, debug=debug):
+                return False
+            if not smaller_node.test_max(greater_node.max, edge_e & greater_node.max_e, debug=debug):
+                return False
+            return True
+        else:
+            if pred.column.name not in self.col_index:
+                return True
+            root_node = self.col_index[pred.column.name]
+            if pred.op.symbol in ('>', '>='):
+                return root_node.test_min(pred.value, edge_e, debug=debug)
+            else:
+                return root_node.test_max(pred.value, edge_e, debug=debug)
+
+    def add(self, pred, debug=False):
+        """
+        Add a new pred to the block
+        :param pred: A new pred
+        :param debug: whether to be debugging
+        """
+        assert self.test(pred), "You can only add a predicate that does not contradict the bounds"
+        self.preds.append(pred)
+        cname = pred.column.name
+        if cname not in self.col_index:
+            self.col_index[cname] = ColumnNode(pred.column, self.col_index, debug=debug)
+        cnode = self.col_index[cname]
+        if pred.comparative:
+            cname2 = pred.col2.name
+            if cname2 not in self.col_index:
+                self.col_index[cname2] = ColumnNode(pred.col2, self.col_index, debug=debug)
+            cnode2 = self.col_index[cname2]
+            if cnode.name == cnode2.name:
+                return
+            tup = None
+            if pred.op.symbol == '=':
+                cnode.combine(cnode2, debug=debug)
+            elif pred.op.symbol == '>=':
+                cnode.add_smaller_node(cnode2, True)
+                cnode2.add_greater_node(cnode, True)
+            elif pred.op.symbol == '<=':
+                cnode.add_greater_node(cnode2, True)
+                cnode2.add_smaller_node(cnode, True)
+            elif pred.op.symbol == '>':
+                # if cnode.name == cnode2.name:
+                #     # This is an error.  Remove the pred.
+                #     raise ValueError(f"The pred {self.preds.pop(-1)} cannot be added")
+                cnode.add_smaller_node(cnode2, False)
+                cnode2.add_greater_node(cnode, False)
+            elif pred.op.symbol == '<':
+                # if cnode.name == cnode2.name:
+                #     # This is an error.  Remove the pred.
+                #     raise ValueError(f"The pred {self.preds.pop(-1)} cannot be added")
+                cnode.add_greater_node(cnode2, False)
+                cnode2.add_smaller_node(cnode, False)
+            self.graph = self.make_graph()
+            graph = self.graph
+            scc_map = kosaraju(graph, root_key=True)
+            for root in scc_map.keys():
+                if len(scc_map[root]) > 1:
+                    remaining_node = self.col_index[root]
+                    for node in scc_map[root]:
+                        if node not in remaining_node.col_set:
+                            remaining_node.combine(self.col_index[node])
+            # while True:
+            #     # Keep finding cycles and combining until no more cycles exist
+            #     cycle = find_cycle(self.make_graph())
+            #     if cycle is None:
+            #         return
+            #     prev_node = cycle[-1]
+            #     remaining_node = self.col_index[prev_node]
+            #     for node in cycle:
+            #         assert self.col_index[prev_node].greater[node], "This pred cannot have been added.  The block is broken."
+            #         remaining_node.combine(self.col_index[node])
+        else:
+            if pred.op.symbol == '=':
+                cnode.set_min_all(pred.value, True)
+                cnode.set_max_all(pred.value, True)
+            elif pred.op.symbol == '>=':
+                cnode.set_min_all(pred.value, True)
+            elif pred.op.symbol == '<=':
+                cnode.set_max_all(pred.value, True)
+            elif pred.op.symbol == '>':
+                cnode.set_min_all(pred.value, False)
+            elif pred.op.symbol == '<':
+                cnode.set_max_all(pred.value, False)
 
 
 class ColumnNode:
@@ -321,9 +701,63 @@ class ColumnNode:
         self.name = c.name
         self.col_set = {c.name}
 
+    def test_min(self, n, e, debug=False):
+        local_e = self.max_e & e
+        if self.max < n:
+            if debug:
+                print(f"Column {self.name} has max {self.max}, so it cannot be greater than {n}.")
+            return False
+        elif (self.max == n) and (not local_e):
+            if debug:
+                print(f"Column {self.name} has max {self.max}, so it cannot be greater than {n}.")
+            return False
+        for col in self.greater.keys():
+            if not self.col_index[col].test_min(n, e & self.greater[col], debug=debug):
+                return False
+        return True
+
+    def test_max(self, n, e, debug=False):
+        local_e = self.min_e & e
+        if self.min > n:
+            if debug:
+                print(f"Column {self.name} has min {self.min}, so it cannot be less than {n}.")
+            return False
+        elif (self.min == n) and (not local_e):
+            if debug:
+                print(f"Column {self.name} has min {self.min}, so it cannot be less than {n}.")
+            return False
+        for col in self.smaller.keys():
+            if not self.col_index[col].test_max(n, e & self.smaller[col], debug=debug):
+                return False
+        return True
+
+    def __str__(self):
+        min_sym = '>=' if self.min_e else '>'
+        max_sim = '<=' if self.max_e else '<'
+        gne = []
+        ge = []
+        for c in self.greater.keys():
+            if self.greater[c]:
+                ge.append(c)
+            else:
+                gne.append(c)
+        lne = []
+        le = []
+        for c in self.smaller.keys():
+            if self.smaller[c]:
+                le.append(c)
+            else:
+                lne.append(c)
+
+        return f'''{'{'}{self.columns}, {max_sim} {self.max}, {min_sym} {self.min}, < {gne}, > {lne}, <= {ge}, >= {le}'''
+
     def combine(self, other, debug=False):
         # Merge two ColumnNodes.  Return False if it raises a contradiction, else return True
         self.type |= other.type
+
+        # Set mins and maxes
+        self.set_min_all(other.min, other.min_e)
+        self.set_max_all(other.max, other.max_e)
 
         # Remove from linked list
         if other.left is not None:
@@ -331,47 +765,77 @@ class ColumnNode:
         if other.right is not None:
             other.right.left = other.left
 
-        all_columns = set(sum([self.columns, other.columns] + [list(d.keys()) for d in (
-            self.greater,
-            other.greater,
-            self.smaller,
-            other.smaller
-        )], []))
-        for c in all_columns:
-            if c in self.columns:
-                if c in other.smaller:
-                    if not other.smaller[c]:
-                        return False
-                    del other.smaller[c]
-                    del self.greater[other.name]
-                if c in other.greater:
-                    if not other.greater[c]:
-                        return False
-                    del other.greater[c]
-                    del self.smaller[other.name]
-            elif c in other.columns:
-                self.columns.append(c)
-                self.col_set.add(c)
-                self.col_index[c] = self
-            elif c in other.greater:
-                if c in self.greater:
-                    # Only still [ if both are [
-                    self.greater[c] &= other.greater[c]
-                    del other.greater[c]
-                    self.col_index[c].smaller[self.name] = self.smaller[c]
-                    del self.col_index[c].smaller[other.name]
-                else:
-                    self.greater[c] = other.greater[c]
-            elif c in other.smaller:
-                if c in self.smaller:
-                    # Only still [ if both are [
-                    self.smaller[c] &= other.smaller[c]
-                    del other.smaller[c]
-                    self.col_index[c].greater[self.name] = self.smaller[c]
-                    del self.col_index[c].greater[other.name]
-                else:
-                    self.smaller[c] = other.smaller[c]
-        return True
+        # Combine the column lists and change the column index
+        for c in other.columns:
+            self.columns.append(c)
+            self.col_set.add(c)
+            self.col_index[c] = self
+
+        # Combine the greater than lists
+        for c, e in other.greater.items():
+            self.add_greater_node(self.col_index[c], e)
+
+        # Combine the smaller than lists
+        for c, e in other.smaller.items():
+            self.add_smaller_node(self.col_index[c], e)
+
+        # Prune instances of pointing to yourself
+        for c in self.columns:
+            if c in self.smaller:
+                del self.smaller[c]
+            if c in self.greater:
+                del self.greater[c]
+
+        # Delete the other nodes' attributes
+        del other.greater
+        del other.smaller
+        del other.columns
+        del other.col_set
+        return
+
+        # all_columns = set(sum([self.columns, other.columns] + [list(d.keys()) for d in (
+        #     self.greater,
+        #     other.greater,
+        #     self.smaller,
+        #     other.smaller
+        # )], []))
+        # for c in all_columns:
+        #     if c in self.columns:
+        #         if c in other.smaller:
+        #             if not other.smaller[c]:
+        #                 return False
+        #             del other.smaller[c]
+        #             del self.greater[other.name]
+        #         if c in other.greater:
+        #             if not other.greater[c]:
+        #                 return False
+        #             del other.greater[c]
+        #             del self.smaller[other.name]
+        #     elif c in other.columns:
+        #         self.columns.append(c)
+        #         self.col_set.add(c)
+        #         self.col_index[c] = self
+        #     elif c in other.greater:
+        #         if c in self.greater:
+        #             # Only still [ if both are [
+        #             self.greater[c] &= other.greater[c]
+        #             del other.greater[c]
+        #             self.col_index[c].smaller[self.name] = self.smaller[c]
+        #             del self.col_index[c].smaller[other.name]
+        #         else:
+        #             self.greater[c] = other.greater[c]
+        #     elif c in other.smaller:
+        #         if c in self.smaller:
+        #             # Only still [ if both are [
+        #             self.smaller[c] &= other.smaller[c]
+        #             del other.smaller[c]
+        #             self.col_index[c].greater[self.name] = self.smaller[c]
+        #             del self.col_index[c].greater[other.name]
+        #         else:
+        #             self.smaller[c] = other.smaller[c]
+        #
+        # self.col_index[other.name] = self
+        # return True
 
     # def set_min(self, n, e):
     #     if n >= self.min:
@@ -382,6 +846,19 @@ class ColumnNode:
     #     if n <= self.max:
     #         self.max = n
     #         self.max_e = e & (self.max_e | (n < self.max))
+    def set_min_all(self, n, e):
+        changed = False
+        if n > self.min:
+            self.min = n
+            self.min_e = e & (self.min_e | (n > self.min))
+            changed = True
+        elif (n == self.min) and (self.min_e != (self.min_e & e)):
+            self.min_e = self.min_e & e
+            changed = True
+        if changed:
+            for c in self.greater.keys():
+                self.col_index[c].set_min_all(n, e & self.greater[c])
+
     def set_min(self, n, e):
         # old_min = self.min
         # old_e = self.min_e
@@ -398,6 +875,19 @@ class ColumnNode:
         # assert old_e == self.min_e, "They are different"
         # assert old_min == self.min, "They are different"
 
+    def set_max_all(self, n, e):
+        changed = False
+        if n < self.max:
+            self.max = n
+            self.max_e = e & (self.max_e | (n > self.max))
+            changed = True
+        elif (n == self.max) and (self.max_e != (self.max_e & e)):
+            self.max_e = self.max_e & e
+            changed = True
+        if changed:
+            for c in self.smaller.keys():
+                self.col_index[c].set_max_all(n, e & self.smaller[c])
+
     def set_max(self, n, e):
         # if n <= self.max:
         #     self.max = n
@@ -413,10 +903,18 @@ class ColumnNode:
         # assert new_max == self.max, f"They are different in case: [max: {old_max}, old_e: {old_e}, n: {n}, e: {e}"
 
     def add_greater(self, c, e):
-        self.greater[c] = e
+        self.greater[c] = e & self.greater.get(c, True)
+
+    def add_greater_node(self, other, e):
+        if self.name != other.name:
+            self.greater[other.name] = e & self.greater.get(other.name, True)
 
     def add_smaller(self, c, e):
-        self.smaller[c] = e
+        self.smaller[c] = e & self.smaller.get(c, True)
+
+    def add_smaller_node(self, other, e):
+        if self.name != other.name:
+            self.smaller[other.name] = e & self.smaller.get(other.name, True)
 
     def set_left(self, other):
         # Only call this when len(self.smaller.keys()) = 0
