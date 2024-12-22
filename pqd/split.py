@@ -96,7 +96,7 @@ class PNode:
                 self.right_child = PNode(workload, table, tree=tree[1])
                 self.left_child = PNode(workload, table, tree=tree[2])
                 self.pred = pred
-                return
+            return
 
         if blocks is None:
             self.blocks = {}
