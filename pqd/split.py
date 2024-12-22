@@ -90,6 +90,10 @@ class PNode:
         """
         self.workload = workload
         self.table = table
+        self.pred = None
+        self.left_child = None
+        self.right_child = None
+
         if tree is not None:
             if len(tree) != 0:
                 pred = pred_gen(tree[0], table)
@@ -120,9 +124,6 @@ class PNode:
             self.valid_queries = list(blocks.keys())
 
         self.wkld_size = len(self.valid_queries)
-        self.left_child = None
-        self.right_child = None
-        self.pred = None
 
     def is_split(self):
         return self.pred is not None
