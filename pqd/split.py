@@ -208,10 +208,10 @@ class PNode:
 
         if verbose:
             print(f"Recursing to right child of size {self.right_child.wkld_size} for node {id} with workload size: {self.wkld_size}")
-        self.right_child.split(factor=max(1,10/len(id)), verbose=verbose, verbose2=verbose2, id=id + '0')
+        self.right_child.split(factor=min(1,10/len(id)), verbose=verbose, verbose2=verbose2, id=id + '0')
         if verbose:
             print(f"Recursing to left child of size {self.left_child.wkld_size} for node {id} with workload size: {self.wkld_size}")
-        self.left_child.split(factor=max(1,10/len(id)), verbose=verbose, verbose2=verbose2, id=id + '1')
+        self.left_child.split(factor=min(1,10/len(id)), verbose=verbose, verbose2=verbose2, id=id + '1')
         self.pred = best_pred
         return True
 
