@@ -207,6 +207,10 @@ class PQD:
             self.indices[id] = objs
             self.query_ids[id] = q
             for obj in objs:
+                if obj not in self.table_q_dict:
+                    print("A contradiction has been found")
+                    print(f"Query: {q}")
+                    print(f"File: {obj}")
                 self.table_q_dict[obj].append(id)
             id += 1
 
