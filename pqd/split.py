@@ -178,6 +178,11 @@ class PNode:
             return False  # cannot be split further
         if verbose:
             print("Chosen Pred:", best_pred)
+            if best_pred.column.name[-3:] == 'key':
+                print("WARNING: A key was chosen")
+                print(f"Pred Score: {best_split_len}   Workload Size: {self.wkld_size}")
+                print(f"Current Factor: {factor}")
+
         # right_wkld, left_wkld, both_wkld = self.workload.split(best_pred, self.boundaries)
 
         # Make the new blocks
