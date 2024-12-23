@@ -3,7 +3,7 @@ from qd.qd_node import Node, Root
 from qd.qd_column import Column
 from qd.qd_table import Table, table_gen
 from qd.qd_predicate import Operator
-from qd.qd_predicate_subclasses import pred_gen, Numerical, NumComparative, Categorical, CatComparative, intersect
+from qd.qd_predicate_subclasses import pred_gen, Numerical, NumComparative, Categorical, CatComparative, intersect, BigColumnBlock
 from fastparquet import ParquetFile
 import numpy as np
 from json import dump, load, loads
@@ -304,13 +304,14 @@ def reset(table, obj):
         raise Exception("Invalid object for resetting")
 
 
-def index(query, root_path, table, tree=None, verbose=False):
+def index(query, root_path, table, tree=None, block=None, verbose=False):
     """
     For a given query, recursively get the relevant files
     :param query: a Query object
     :param root_path: the path to the root object, whether or not it actually exists
     :param table: a table object
     :param tree: a tree dictionary.  Only used for recursive calls
+    :param block: a BigColumnBlock object.  Only used for recursive calls
     :param verbose: whether to print extra stuff, like which ones we're ignoring
     :return: a list of the paths to relevant files in the qd_tree
     """
@@ -325,6 +326,11 @@ def index(query, root_path, table, tree=None, verbose=False):
         with open(path_s + '.json', 'r') as file:
             tree = load(file)
         query = reset(table, query)
+        block = BigColumnBlock()
+        for pred in query.list_preds():
+            if not block.test(pred):
+                return False
+            block.add(pred)
     # if verbose:
     #     print(tree)
     #     print('')
@@ -333,6 +339,8 @@ def index(query, root_path, table, tree=None, verbose=False):
     if len(tree) == 0:
         output.append(path_s + '.' + storage)
         return output
+    elif len(tree) == 1:
+        return output
 
     # Recursive cases
 
@@ -340,19 +348,35 @@ def index(query, root_path, table, tree=None, verbose=False):
     if verbose:
         print("Pred:", tree[0])
     pred = pred_gen(tree[0], table)
-    if intersect(query.list_preds() + [pred]):
+    match_right = block.test(pred)
+    match_left = block.test(pred.flip())
+    left_block = None
+    right_block = None
+    if match_right & match_left:
+        right_block = block.fork(pred)
+        left_block = block
+        block.add(pred)
+    elif match_right:
+        right_block = block
+        block.add(pred)
+    elif match_left:
+        left_block = block
+        block.add(pred)
+    else:
+        raise RuntimeError("Something is wrong with predicate check")
+    if match_right:
         # Make sure all column object being acted on are the same by resetting the preds
         new_path = path_s + '0.' + storage
         new_query = Query(query.list_preds() + [pred], table)
-        output += index(new_query, new_path, table, tree[1], verbose)
+        output += index(new_query, new_path, table, tree=tree[1], block=right_block, verbose=verbose)
         valid = True
     elif verbose:
         print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred]))
 
-    if intersect(query.list_preds() + [pred.flip()]):
+    if match_left:
         new_path = path_s + '1.' + storage
         new_query = Query(query.list_preds() + [pred.flip()], table)
-        output += index(new_query, new_path, table, tree[2], verbose)
+        output += index(new_query, new_path, table, tree=tree[2], block=left_block, verbose=verbose)
         valid = True
     elif verbose:
         print("Not going down to {} because {} does not intersect".format(path_s + '0', query.list_preds() + [pred.flip()]))

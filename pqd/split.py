@@ -93,9 +93,10 @@ class PNode:
         self.pred = None
         self.left_child = None
         self.right_child = None
+        self.is_zero = False
 
         if tree is not None:
-            if len(tree) != 0:
+            if len(tree) > 1:
                 pred = pred_gen(tree[0], table)
                 self.right_child = PNode(workload, table, tree=tree[1])
                 self.left_child = PNode(workload, table, tree=tree[2])
@@ -217,6 +218,8 @@ class PNode:
 
     def get_tree(self):
         # Returns a tree object that can be turned into a json
+        if self.is_zero:
+            return [False]
         if self.is_split():
             return [str(self.pred), self.right_child.get_tree(), self.left_child.get_tree()]
         else:
@@ -249,12 +252,13 @@ class PNode:
             depth = 1 + max(left_stats['depth'], right_stats['depth'])
             return {'max': max_size, 'min': min_size, 'average': average, 'depth': depth, 'leaves': leaves}
 
-    def to_qd(self, base_data_path, folder_path, qd_node=None):
+    def to_qd(self, base_data_path, folder_path, qd_node=None, remake_tree=True):
         """
         Turn a PNode tree into a qd tree
         :param base_data_path:
         :param folder_path:
         :param qd_node: a node object from qd.qd_node
+        :param remake_tree: remake trees that contain empty files
         :return: the root of the corresponding qd tree
         """
         # Initialize on the root node
@@ -276,6 +280,11 @@ class PNode:
             qd_node = Root(table)
 
         # If not a leaf, then split and recurse
+        if remake_tree:
+            if qd_node.table.size == 0:
+                self.pred = None
+                self.is_zero = True
+                return
         if self.pred is not None:
             qd_node.split(self.pred, check_bounds=False)
             _ = self.right_child.to_qd(None, None, qd_node=qd_node.child_right)
