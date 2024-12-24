@@ -221,9 +221,8 @@ class NumComparative(Predicate):
 def intersect(preds, debug=False):
     block = BigColumnBlock()
     for pred in preds:
-        if not block.test(pred):
+        if not block.add(pred, false_if_fail_test=True):
             return False
-        block.add(pred)
     return True
     # date_preds = []
     # num_preds = []
@@ -287,7 +286,8 @@ class BigColumnBlock:
     """
     Handles the three categories: dates, integers, and categories
     """
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, always_false=False):
+        self.always_false = False
         self.date_block = ColumnBlock(debug=debug)
         self.num_block = ColumnBlock(debug=debug)
         self.cat_preds = []
@@ -304,6 +304,8 @@ class BigColumnBlock:
         :param pred: a pred
         :return: Whether all the preds in this block, plus the new bred, can be satisfied
         """
+        if self.always_false:
+            return False
         if pred.column.numerical:
             if pred.column.ctype == 'DATE':
                 return self.date_block.test(pred, debug=debug)
@@ -312,7 +314,13 @@ class BigColumnBlock:
         else:
             return cat_intersect(self.cat_preds + [pred])
 
-    def add(self, pred, debug=False):
+    def add(self, pred, debug=False, false_if_fail_test=False):
+        if self.always_false:
+            return False
+        if not self.test(pred):
+            if false_if_fail_test:
+                return False
+            raise ValueError("You can only add a predicate that does not contradict the bounds")
         if pred.column.numerical:
             if pred.column.ctype == 'DATE':
                 self.date_block.add(pred, debug=debug)
@@ -320,6 +328,8 @@ class BigColumnBlock:
                 self.num_block.add(pred, debug=debug)
         else:
             self.cat_preds.append(pred)
+        if false_if_fail_test:
+            return True
 
     def fork(self, new_pred):
         """
@@ -590,7 +600,6 @@ class ColumnBlock:
         :param pred: A new pred
         :param debug: whether to be debugging
         """
-        assert self.test(pred), "You can only add a predicate that does not contradict the bounds"
         self.preds.append(pred)
         cname = pred.column.name
         if cname not in self.col_index:
