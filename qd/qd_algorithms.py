@@ -151,7 +151,7 @@ def all_predicates(data, table, columns=None):
     return predicates
 
 
-def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None, prev_preds=None, columns=None, block_size=1000):
+def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None, prev_preds=None, columns=None, block_size=1000, pred_blocks=None):
     """
     :param table: a table object
     :param workload: a workload object
@@ -161,6 +161,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
         param workload: a workload object
         param predicate: a predicate on the data
         param prev_preds: previous preds used to split the data up to this point
+        param q_blocks: an optional argument; blocks
         returns a ranking of how well the predicate splits the operation of the workload on the data.
                 better predicates rank higher, and the ranking should be 0 if it cannot be used
     :param subset_size: the size of the data subsets
@@ -169,26 +170,39 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
     :param prev_preds: previous predicates leading up to this one.  used only for recursive calls
     :param columns: the columns that can be predicated on.  if none, then all columns can be predicated on
     :param block_size: the minimum size of a block.  The maximum size is twice the block size.
+    :param pred_blocks: a list of predicate blocks.  used only for recursive calls
     :return: a tree as a nested list
     """
     top = False
     output = []
     if node is None and root is None:
+        print("Initializing...", end='\n')
         node = Root(table)
         root = node
         prev_preds = []
         top = True
         rank_fn = rank_fn_gen(block_size)
         workload = reset(table, workload)
-    print("Generating subset...", end='\r')
-    valid_splits = False
-    while not valid_splits:
-        top_score = 0
+        pred_blocks = []
+        for q in workload.queries:
+            block = BigColumnBlock()
+            for pred in q.list_preds():
+                if not block.add(pred, false_if_fail_test=True):
+                    # If the query itself is contradictory, it is represented by a block that always returns False
+                    block = BigColumnBlock(always_false=True)
+                    break
+            pred_blocks.append(block)
+        print("Done.             ")
+    valid_split_found = False
+    best_pred = None
+    while not valid_split_found:
         if table.size > 2 * block_size:
+            print("Generating subset...", end='\r')
             subset = subset_gen(table, subset_size)
             print("Generating preds...", end='\r')
             preds = all_predicates(subset, root.table, columns=columns)
-            best_pred = preds[0]
+            print("Sorting preds...", end='\r')
+            preds.sort(reverse=True, key=lambda p: rank_fn_gen(0)(subset, table, workload, p, prev_preds, q_blocks=pred_blocks))
             print("Testing preds...", end='\r')
             for pred in preds:
                 # if len(str(pred)) > 100:
@@ -196,10 +210,11 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                 # else:
                 #     print("acting on pred:", pred, '                                 ', end='\r')
                 score = rank_fn(subset, table, workload, pred, prev_preds)
-                if score > top_score:
+                if score > 0:
+                    valid_split_found = True
                     best_pred = pred
-                    top_score = score
-        if top_score > 0:
+                    break
+        if best_pred is not None:
             print('Choosing the following predicate:', best_pred)
             print('Splitting {} into {} and {}...'.format(table.name, table.name + '0', table.name + '1'), end='\r')
             child_right, child_left = root.split_leaf(node, best_pred)
@@ -213,6 +228,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                                   prev_preds=prev_preds + [best_pred],
                                   columns=columns,
                                   block_size=block_size,
+                                  pred_blocks=pred_blocks
                                   )
             dict_left = tree_gen(child_left.table,
                                  workload_left,
@@ -223,14 +239,15 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                                  prev_preds=prev_preds + [best_pred.flip()],
                                  columns=columns,
                                  block_size=block_size,
+                                 pred_blocks=pred_blocks
                                  )
             output.append(str(best_pred))
             output += [dict_right, dict_left]
-            valid_splits = True
+            valid_split_found = True
         elif table.size > (2 * block_size):
             print("Failed to split {} rows; minimum block size is {}  Trying again.".format(table.size, block_size))
         else:
-            valid_splits = True
+            valid_split_found = True
             print("Leaving {} with {} rows".format(table.path, table.size))
     if top:
         print(output)
@@ -251,8 +268,55 @@ def rank_fn_gen(min_size, multiply_sizes=False):
     :param multiply_sizes: whether to multiply the number of queries on a side by the number of datapoints on that side
     :return: a function ranking parameters
     """
-    def rank_fn(data, table, workload, predicate, prev_preds):
+    def pure_block_rank(pred, q_blocks):
+        """
+        Rank the pred only on how it performs on the blocks
+        :param pred: a predicate
+        :param q_blocks: a list of blocks representing queries and previous predicates
+        :return: a ranking of the pred; higher is worse
+        """
+        neg_pred = pred.flip()
+        right_valid = False
+        left_valid = False
+        output = 0
+        for block in q_blocks:
+            right_test = block.test(pred)
+            left_test = block.test(neg_pred)
+            right_valid |= right_test
+            left_valid |= left_test
+            if right_test and left_test:
+                output += 1
+        if right_valid and left_valid:
+            return output
+        return 0
+
+    def pure_workload_rank(pred, workload, prev_preds):
+        """
+        Rank the pred only on how it performs on the workload and previous preds
+        :param pred: a predicate
+        :param workload: a workload
+        :param prev_preds: previous predicates that apply to the entire workload
+        :return: a ranking of the predicate; higher is worse
+        """
         w_right, w_left, w_both = workload.split(predicate, prev_preds)
+        if (len(w_right) > 0) and (len(w_left) > 0):
+            return len(w_both)
+        return 0
+
+    if min_size == 0:
+        def rank_fn(data, table, workload, predicate, prev_preds, q_blocks=None):
+            if q_blocks is None:
+                init_rank = pure_workload_rank(predicate, workload, prev_preds)
+            else:
+                init_rank = pure_block_rank(predicate, q_blocks)
+            return init_rank + 1
+        return rank_fn
+
+    def rank_fn(data, table, workload, predicate, prev_preds, q_blocks=None):
+        if q_blocks is None:
+            init_rank = pure_workload_rank(predicate, workload, prev_preds)
+        else:
+            init_rank = pure_block_rank(predicate, q_blocks)
         d_right = []
         d_left = []
         if type(data) == list:
@@ -276,7 +340,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
             return len(workload)*len(data) - len(w_right)*len(d_right) - len(w_left)*len(d_left)
         else:
             # We add 1 here to show it is better than an invalid split
-            return len(workload) - len(w_both) + 1
+            return init_rank + 1
 
     return rank_fn
 
