@@ -145,7 +145,7 @@ def remove_index(func):
 
 
 class PQD:
-    def __init__(self, root_path, table, workload, block_size, split_factor, row_group_size=1000000, dp_factor=100):
+    def __init__(self, root_path, table, workload, block_size, split_factor, row_group_size=1000000, dp_factor=100, verbose=False):
         """
         Initialize a PQD layout
         :param root_path: path to the root file, regardless of whether it exists
@@ -155,6 +155,7 @@ class PQD:
         :param split_factor: How many ways to split the data
         :param row_group_size: Size of row groups that the data is made into
         :param dp_factor: Granularity of the dynamic programming by row count in file_gen_3
+        :param verbose: whether to print stuff in initilization
         """
 
         # Save relevant stuff
@@ -188,7 +189,7 @@ class PQD:
         # Initialize table_dict, table_q_dict, and the index
         self.table_dict = {}  # dict mapping file names to corresponding table objects
         self.table_q_dict = {}  # dict mapping file names to list of query ids in the workload which access it
-        all_objs = index(Query([], table), root_path, table)
+        all_objs = index(Query([], table), root_path, table, verbose=verbose)
         for obj in all_objs:
             self.index[obj] = []
             self.table_dict[obj] = table_gen(obj)
