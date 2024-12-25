@@ -183,26 +183,28 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
         top = True
         rank_fn = rank_fn_gen(block_size)
         workload = reset(table, workload)
-        pred_blocks = []
-        for q in workload.queries:
-            block = BigColumnBlock()
-            for pred in q.list_preds():
-                if not block.add(pred, false_if_fail_test=True):
-                    # If the query itself is contradictory, it is represented by a block that always returns False
-                    block = BigColumnBlock(always_false=True)
-                    break
-            pred_blocks.append(block)
+        # pred_blocks = []
+        # for q in workload.queries:
+        #     block = BigColumnBlock()
+        #     for pred in q.list_preds():
+        #         if not block.add(pred, false_if_fail_test=True):
+        #             # If the query itself is contradictory, it is represented by a block that always returns False
+        #             block = BigColumnBlock(always_false=True)
+        #             break
+        #     prev_preds.append(block)
+
+
+
         print("Done.             ")
-    valid_split_found = False
-    best_pred = None
-    while not valid_split_found:
+    print("Generating subset...", end='\r')
+    valid_splits = False
+    while not valid_splits:
+        top_score = 0
         if table.size > 2 * block_size:
-            print("Generating subset...", end='\r')
             subset = subset_gen(table, subset_size)
             print("Generating preds...", end='\r')
             preds = all_predicates(subset, root.table, columns=columns)
-            print("Sorting preds...", end='\r')
-            preds.sort(reverse=True, key=lambda p: rank_fn_gen(0)(subset, table, workload, p, prev_preds, q_blocks=pred_blocks))
+            best_pred = preds[0]
             print("Testing preds...", end='\r')
             for pred in preds:
                 # if len(str(pred)) > 100:
@@ -210,11 +212,10 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                 # else:
                 #     print("acting on pred:", pred, '                                 ', end='\r')
                 score = rank_fn(subset, table, workload, pred, prev_preds)
-                if score > 0:
-                    valid_split_found = True
+                if score > top_score:
                     best_pred = pred
-                    break
-        if best_pred is not None:
+                    top_score = score
+        if top_score > 0:
             print('Choosing the following predicate:', best_pred)
             print('Splitting {} into {} and {}...'.format(table.name, table.name + '0', table.name + '1'), end='\r')
             child_right, child_left = root.split_leaf(node, best_pred)
@@ -228,7 +229,6 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                                   prev_preds=prev_preds + [best_pred],
                                   columns=columns,
                                   block_size=block_size,
-                                  pred_blocks=pred_blocks
                                   )
             dict_left = tree_gen(child_left.table,
                                  workload_left,
@@ -239,15 +239,14 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                                  prev_preds=prev_preds + [best_pred.flip()],
                                  columns=columns,
                                  block_size=block_size,
-                                 pred_blocks=pred_blocks
                                  )
             output.append(str(best_pred))
             output += [dict_right, dict_left]
-            valid_split_found = True
+            valid_splits = True
         elif table.size > (2 * block_size):
             print("Failed to split {} rows; minimum block size is {}  Trying again.".format(table.size, block_size))
         else:
-            valid_split_found = True
+            valid_splits = True
             print("Leaving {} with {} rows".format(table.path, table.size))
     if top:
         print(output)
@@ -298,7 +297,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         :param prev_preds: previous predicates that apply to the entire workload
         :return: a ranking of the predicate; higher is worse
         """
-        w_right, w_left, w_both = workload.split(pred, prev_preds)
+        w_right, w_left, w_both = workload.split(predicate, prev_preds)
         if (len(w_right) > 0) and (len(w_left) > 0):
             return len(w_both)
         return 0
