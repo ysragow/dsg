@@ -297,7 +297,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         :param prev_preds: previous predicates that apply to the entire workload
         :return: a ranking of the predicate; higher is worse
         """
-        w_right, w_left, w_both = workload.split(predicate, prev_preds)
+        w_right, w_left, w_both = workload.split(pred, prev_preds)
         if (len(w_right) > 0) and (len(w_left) > 0):
             return len(w_both)
         return 0
