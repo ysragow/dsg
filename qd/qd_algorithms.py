@@ -424,7 +424,7 @@ def index(query, root_path, table, tree=None, block=None, verbose=False):
         block.add(pred)
     elif match_left:
         left_block = block
-        block.add(pred)
+        block.add(pred.flip())
     else:
         raise RuntimeError("Something is wrong with predicate check")
     if match_right:
