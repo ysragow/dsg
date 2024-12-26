@@ -418,7 +418,7 @@ def index(query, root_path, table, tree=None, block=None, verbose=False):
     if match_right & match_left:
         right_block = block.fork(pred)
         left_block = block
-        block.add(pred)
+        block.add(pred.flip())
     elif match_right:
         right_block = block
         block.add(pred)
