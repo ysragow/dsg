@@ -359,7 +359,8 @@ class PQD:
                         file_chunk = df[df_index:df_index + (2 * self.block_size)]
                         chunk_file_name = file_template.format(i, file_num)
                         if verbose:
-                            print(f"Making file {chunk_file_name} from file {obj} with {file_chunk.shape[0]} rows")
+                            n_rows = file_chunk.shape[0]
+                            print(f"Making file {chunk_file_name} from file {obj} with {n_rows} rows and {-(-n_rows//self.rg_size)} row groups.")
                         make_alg(chunk_file_name, {obj: file_chunk})
                         df_index += 2 * self.block_size
                     file_num += 1
