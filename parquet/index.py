@@ -1,4 +1,4 @@
-from params import queries, query_objects, name, partitions, layout, table_path, verbosity_2
+from params import queries, query_objects, name, partitions, layout, table_path, verbosity_2, timestamps
 from time import time
 from json import load, dump
 from os import listdir
@@ -30,9 +30,12 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         #     else:
         #         root_file = file
         if layout == 'qd':
-            return qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=verbosity_2)
+            output = qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=verbosity_2)
         elif layout == 'pqd':
-            return pqd_index(query_obj, root_file[:-4] + 'parquet', table)
+            output = pqd_index(query_obj, root_file[:-4] + 'parquet', table)
+        if timestamps:
+            print(f"In {num_partitions}, found {len(output)} matching files in {total_time} seconds")
+        return output
 
     num_partitions = int(folder.split('/')[-1])
 
@@ -101,7 +104,7 @@ def main():
         # Index
         for partition_count in partitions:
             f = '{}/{}'.format(local_name, partition_count)
-            q_files[partition_count] = index(f, q_bottom, q_top, timestamps=True, query_obj=query_obj)
+            q_files[partition_count] = index(f, q_bottom, q_top, timestamps=timestamps, query_obj=query_obj)
         all_files.append(q_files)
 
     # Put data into files
