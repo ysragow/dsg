@@ -13,7 +13,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
 
     assert layout in ("rgm", "qd", "index", "pqd"), "Invalid layout"
 
-    num_partitions = int(folder.split('/')[-1])
+    num_partitions = folder.split('/')[-1]
 
     if layout in ('qd', 'pqd'):
         assert query_obj is not None, "A query object is required to index qd trees"
@@ -40,6 +40,8 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         if timestamps:
             print(f"In {num_partitions}, found {len(output)} matching files in {total_time} seconds")
         return output
+
+    num_partitions = int(num_partitions)
 
     # Binary search for smallest start less than or equal to bottom
     with open(folder + '/index.json', 'r') as file1:
