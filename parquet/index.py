@@ -32,6 +32,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         #     else:
         #         root_file = file
         total_time = time()
+        print('hi')
         if layout == 'qd':
             output = qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=verbosity_2)
         elif layout == 'pqd':
