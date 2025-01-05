@@ -2,7 +2,7 @@ import pyarrow.parquet as pq
 from warnings import filterwarnings
 from os import path, mkdir
 from parquet import generate_two_column
-from params import size as p_size, partitions as p_partitions, name as p_name, write_processes, row_groups, queries, prev
+from params import size as p_size, partitions as p_partitions, name as p_name, write_processes, layout, queries, prev
 from time import time
 from json import dump
 from index import index
@@ -26,18 +26,15 @@ def read_write(arg):
     query_list, sources, out_file, rg_size = arg
     sorted_column = pq.SortingColumn(0)
     print("Writing to file " + out_file + '                ', end='\r')
-    if (row_groups is None) or (row_groups == 'none'):
+    if (layout is None) or (layout == 'none') or (layout == 'index'):
         query = query_list[0]
         data = regular_read(query, sources)
         bound = query[1][2] - query[0][2]
-        pq.write_table(data, out_file, sorting_columns=[sorted_column])
-    elif row_groups == 'unoptimize':
-        data = regular_read(query_list[0], sources)
         pq.write_table(data, out_file, row_group_size=rg_size, sorting_columns=[sorted_column])
-    elif row_groups == 'default':
-        data = regular_read(query_list[0], sources)
-        pq.write_table(data, out_file)
-    elif row_groups == 'optimize':
+    # elif layout == 'default':
+    #     data = regular_read(query_list[0], sources)
+    #     pq.write_table(data, out_file)
+    elif layout == 'rgm':
         sel = [(q[1][2] - q[0][2]) for q in queries]
         assert len(sel) == 2, "For now, this will only work if there are 2 queries"
         assert (sel[0] // sel[1]) == (sel[0] / sel[1]), 'The selectivity of the second query must divide the selectivity of the first query'
@@ -46,11 +43,11 @@ def read_write(arg):
             data.append(regular_read(query, sources))
         data = table_concat(data)[0]
         pq.write_table(data, out_file, row_group_size=rg_size, sorting_columns=[sorted_column])
-    elif str(row_groups).isdigit():
+    elif str(layout).isdigit():
         data = regular_read(query_list[0], sources)
-        pq.write_table(data, out_file, row_group_size=int(row_groups), sorting_columns=[sorted_column])
+        pq.write_table(data, out_file, row_group_size=int(layout), sorting_columns=[sorted_column])
     else:
-        raise Exception("params.row_groups must be None, 'none', 'default', 'optimize', or an integer")
+        raise Exception("params.layout must be None, 'none', 'index', 'rgm', or an integer")
 
 
 def generate(name, size, partitions, source=None):
@@ -85,7 +82,7 @@ def generate(name, size, partitions, source=None):
     print("Writing data with {} partitions...".format(partitions))
     start_time = time()
     process_tuples = []
-    if row_groups == 'optimize':
+    if layout == 'rgm':
         # Selectivities statistics
         large_select = queries[0][1][2] - queries[0][0][2]
         small_select = queries[1][1][2] - queries[1][0][2]
@@ -161,7 +158,7 @@ def generate(name, size, partitions, source=None):
                 files = index(source_folder, start, stop)
             else:
                 files = [name + '/0.parquet']
-            if row_groups == 'unoptimize':
+            if layout != 'rgm':
                 process_tuples.append((filters, files, file_path, rg_size))
             else:
                 process_tuples.append((filters, files, file_path, None))
