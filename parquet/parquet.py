@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 from os import mkdir, path
-from qd.qd_query import Query, Numerical, Operator, Table
+from qd.qd_query import Query, Numerical, Operator
+from qd.qd_table import Table
 from qd.qd_column import Column
 
-A = Column('A', 0, 'INTEGER')
-B = Column('B', 1, 'REAL')
+# A = Column('A', 0, 'INTEGER')
+# B = Column('B', 1, 'REAL')
 
 
 def generate_random_column(size, rounds=10):
