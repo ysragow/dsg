@@ -2,7 +2,7 @@ import pyarrow.parquet as pq
 from warnings import filterwarnings
 from os import path, mkdir
 from parquet import generate_two_column
-from params import size as p_size, partitions as p_partitions, name as p_name, write_processes, layout, queries, prev
+from params import size as p_size, partitions as p_partitions, name as p_name, write_processes, layout, queries, prev, use_rg
 from time import time
 from json import dump
 from index import index
@@ -83,15 +83,18 @@ def generate(name, size, partitions, source=None):
     start_time = time()
     process_tuples = []
     if layout == 'rgm':
-        # Selectivities statistics
-        large_select = queries[0][1][2] - queries[0][0][2]
-        small_select = queries[1][1][2] - queries[1][0][2]
-        sel_ratio = large_select // small_select
+        if use_rg:
+            # Selectivities statistics
+            large_select = queries[0][1][2] - queries[0][0][2]
+            small_select = queries[1][1][2] - queries[1][0][2]
+            sel_ratio = large_select // small_select
 
-        # Chunk statistics
-        file_count = nid(large_select, file_size)
-        chunk_size = file_size * file_count
-        rg_size = nid(chunk_size, file_count * sel_ratio)
+            # Chunk statistics
+            file_count = nid(large_select, file_size)
+            chunk_size = file_size * file_count
+            rg_size = nid(chunk_size, file_count * sel_ratio)
+        else:
+            rg_size = size
         print("Row group size: ", rg_size)
         # print("chunk_size: ", chunk_size)
         # print("file_count: ", file_count)
@@ -145,11 +148,14 @@ def generate(name, size, partitions, source=None):
                 process_tuples.append((query_list, sources, '{}/{}.parquet'.format(file_path, k), rg_size))
 
     else:
-        large_select = queries[0][1][2] - queries[0][0][2]
-        small_select = queries[1][1][2] - queries[1][0][2]
-        sel_ratio = large_select // small_select
-        file_size = size // partitions
-        rg_size = file_size // sel_ratio
+        if use_rg:
+            large_select = queries[0][1][2] - queries[0][0][2]
+            small_select = queries[1][1][2] - queries[1][0][2]
+            sel_ratio = large_select // small_select
+            file_size = size // partitions
+            rg_size = file_size // sel_ratio
+        else:
+            rg_size = size
         print("Row group size: ", rg_size)
         while start < size:
             file_path = '{}/{}.parquet'.format(folder, start)
