@@ -11,7 +11,7 @@ from pandas import concat
 
 # A = Column('A', 0, 'INTEGER')
 # B = Column('B', 1, 'REAL')
-ram_max = 200000000 # The maximum number of rows the ram can handle in a python object
+ram_max = 1000000000 # The maximum number of rows the ram can handle in a python object
 
 def nid(a, b):
     # Negative integer division.  Returns ceil(a / b)
