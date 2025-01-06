@@ -6,9 +6,16 @@ from os import mkdir, path
 from qd.qd_query import Query, Numerical, Operator
 from qd.qd_table import Table
 from qd.qd_column import Column
+from fastparquet import ParquetFile, write
+from pandas import concat
 
 # A = Column('A', 0, 'INTEGER')
 # B = Column('B', 1, 'REAL')
+ram_max = 3000000000 # The maximum number of rows the ram can handle in a python object
+
+def nid(a, b):
+    # Negative integer division.  Returns ceil(a / b)
+    return -((-a) // b)
 
 
 def generate_random_column(size, rounds=10):
@@ -50,6 +57,15 @@ def generate_two_column(size, name, partitions, minmax=None):
     :param partitions: number of files in output
     """
     assert size >= partitions
+    regen_required = False
+    if size / partitions > ram_max:
+        regen_required = True
+        regen_factor = nid(ram_max, (size // partitions))
+        init_partitions = partitions
+        partitions *= regen_factor
+    else:
+        regen_factor = 1
+        init_partitions = partitions
     if minmax is None:
         step = 1
         start = 0
@@ -62,13 +78,22 @@ def generate_two_column(size, name, partitions, minmax=None):
     par_size = size // partitions
     extras = size % partitions
     for i in range(partitions):
-        index += str(start) + ' '
+        # index += str(start) + ' '
         this_size = par_size + (i < extras)
         generate_basic_parquet(this_size, name + '/{}.parquet'.format(i), start, step)
         start += this_size * step
-    index += str(start)
-    with open(name + '/index.txt', 'w') as file:
-        file.write(index)
+    # index += str(start)
+    # with open(name + '/index.txt', 'w') as file:
+    #     file.write(index)
+    if regen_required:
+        for i in range(init_partitions):
+            print(f"Regenerating partition {i}...")
+            base_num = i * regen_factor
+            files_list = []
+            for j in range(regen_factor):
+                files_list.append(ParquetFile(name + f'/{base_num + i}.parquet').to_pandas())
+            write(name + f"{i}.parquet", concat(files_list))
+
 
 
 def generate_query(s, upper, lower, bupper=None, blower=None):

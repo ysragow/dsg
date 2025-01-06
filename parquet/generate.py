@@ -1,7 +1,7 @@
 import pyarrow.parquet as pq
 from warnings import filterwarnings
 from os import path, mkdir
-from parquet import generate_two_column
+from parquet import generate_two_column, nid
 from params import size as p_size, partitions as p_partitions, name as p_name, write_processes, layout, queries, prev, use_rg
 from time import time
 from json import dump
@@ -13,9 +13,7 @@ from sys import argv
 filterwarnings('ignore')
 
 
-def nid(a, b):
-    # Negative integer division.  Returns ceil(a / b)
-    return -((-a) // b)
+
 
 
 def make_query(start, stop):
