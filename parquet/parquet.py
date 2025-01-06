@@ -66,6 +66,7 @@ def generate_two_column(size, name, partitions, minmax=None):
     else:
         regen_factor = 1
         init_partitions = partitions
+    print(f"Regen Factor: {regen_factor}")
     if minmax is None:
         step = 1
         start = 0
