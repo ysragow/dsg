@@ -60,7 +60,7 @@ def generate_two_column(size, name, partitions, minmax=None):
     regen_required = False
     if size / partitions > ram_max:
         regen_required = True
-        regen_factor = nid(ram_max, (size // partitions))
+        regen_factor = nid((size // partitions), ram_max)
         init_partitions = partitions
         partitions *= regen_factor
     else:
