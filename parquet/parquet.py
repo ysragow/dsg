@@ -2,7 +2,7 @@ import pyarrow.parquet as pq
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from os import mkdir, path
+from os import mkdir, path, remove
 from qd.qd_query import Query, Numerical, Operator
 from qd.qd_table import Table
 from qd.qd_column import Column
@@ -93,8 +93,15 @@ def generate_two_column(size, name, partitions, minmax=None):
             base_num = i * regen_factor
             files_list = []
             for j in range(regen_factor):
-                files_list.append(ParquetFile(name + f'/{base_num + i}.parquet').to_pandas())
-            write(name + f"{i}.parquet", concat(files_list))
+                print(f"Loading dataframe for file {name}/{base_num + j}.parquet...", end="\r")
+                files_list.append(ParquetFile(name + f'/{base_num + j}.parquet').to_pandas())
+                print(f"Deleting {name}/{base_num + j}.parquet...", end="\r")
+                remove(f"{name}/{base_num + j}.parquet")
+            print("Concatenating files...", end="\r")
+            total_file = concat(files_list)
+            print("Writing...", end="\r")
+            write(name + f"{i}.parquet", total_file)
+            print("Done.")
 
 
 
