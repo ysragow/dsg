@@ -80,6 +80,7 @@ def generate_two_column(size, name, partitions, minmax=None):
     for i in range(partitions):
         # index += str(start) + ' '
         this_size = par_size + (i < extras)
+        print(f"Generating partition {i}...")
         generate_basic_parquet(this_size, name + '/{}.parquet'.format(i), start, step)
         start += this_size * step
     # index += str(start)
