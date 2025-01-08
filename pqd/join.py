@@ -405,7 +405,8 @@ class PQD:
         """
         # print(list(obj_dict.items()))
 
-        write(file_path, concat(obj_dict.values()).reset_index(drop=True))
+        # write(file_path, concat(obj_dict.values()).reset_index(drop=True))
+        pq.write_table(Table.from_pandas(concat(obj_dict.values()).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
         for obj in obj_dict.keys():
             self.index[obj].append(file_path)
 
