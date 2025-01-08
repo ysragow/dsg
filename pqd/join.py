@@ -383,7 +383,7 @@ class PQD:
                     is_nonzero = (dframe.shape[0] != 0)
                     if is_nonzero:
                         break
-                if verbose:
+                if verbose and is_nonzero:
                     p_temp = "{} rows from file {}"
                     p_str = ", ".join([p_temp.format(eff_dframes[i][obj3].shape[0], obj3) for obj3 in eff_dframes[i].keys()])
                     print(f"Making file {file_template.format(i, file_num)} with {p_str}")
