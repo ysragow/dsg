@@ -367,6 +367,8 @@ class PQD:
 
                 # Add to effective dframes
                 eff_size = self.eff_size_dict[obj]
+                if eff_size == 0:
+                    continue
                 ind_size = eff_size // self.split_factor  # size of each chunk
                 cutoff = eff_size % self.split_factor  # cutoff for when to stop adding 1 to size
                 for i in range(self.split_factor):
