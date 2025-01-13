@@ -719,6 +719,9 @@ class PQD:
 
         # Write the file and finish
         order = map(lambda x: obj_dict[obj], ordering)
+        for obj in ordering:
+            if obj_dict[obj].shape[0] > 0:
+                self.index[obj].append(file_path)
         print("Ordering:", ordering)
         pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
@@ -762,6 +765,9 @@ class PQD:
 
         # Make the file
         order = map(lambda x: obj_dict[obj], ordering)
+        for obj in ordering:
+            if obj_dict[obj].shape[0] > 0:
+                self.index[obj].append(file_path)
         print("Ordering:", ordering)
         pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
