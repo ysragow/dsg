@@ -773,7 +773,7 @@ class PQD:
         :param file_path: Folder for storing things in
         :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
         """
-        cutoff = 20
+        cutoff = 16
         file_count = len(obj_dict.keys())
         if file_count <= cutoff:
             # The number of files to arrange is small
