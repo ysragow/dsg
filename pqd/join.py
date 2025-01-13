@@ -231,6 +231,37 @@ class PQD:
         if not self.layout_made():
             raise Exception("No layout has been made!")
 
+    def get_queries(self, obj_list):
+        """
+        Extract the query ids from a list of objects
+        :param obj_list: Iterable containing objects
+        :return: The set of queries associated with these objects
+        """
+        output = set()
+        for obj in obj_list:
+            for q in self.table_q_dict[obj]:
+                output.add(q)
+        return output
+
+    def rank_match(self, obj_list, obj, q_dict=None):
+        """
+        Decide how well an object matches up against a list of objects
+        :param obj_list: A list of objects
+        :param obj: The object, to test against the rest
+        :param q_dict: A dictionary mapping query ids to a number.  Default maps every query to 1
+        :return: A score for how well they align - smaller is better
+        """
+        all_qs = self.get_queries(obj_list)
+        if q_dict is None:
+            q_dict = {}
+            for q in all_qs:
+                q_dict[q] = 1
+        rank = 0
+        for q in self.table_q_dict[obj]:
+            if q not in all_qs:
+                rank += q_dict[q]
+        return rank
+
     def make_layout_1(self, take_top=True):
         """
         Create self.layout
@@ -487,6 +518,7 @@ class PQD:
         - Try every ordering of the file chunks and see which one has queries accessing the fewest row groups
         - How to do efficiently?  Dynamic programming on every possible subset!
         - Make files in the optimal ordering
+        This runs in exponential time, so only good for small number of files
         :param file_path: Folder for storing things in
         :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
         """
@@ -495,7 +527,7 @@ class PQD:
         llist_objs = LList(objs)
         total_size = 0
         min_obj_size = 0
-        all_qs = set() # The set of all queries present here
+        # all_qs = set() # The set of all queries present here
         num_rg = -((-total_size) // self.rg_size)
 
         for obj in objs:
@@ -503,8 +535,8 @@ class PQD:
             total_size += obj_dict[obj].shape[0]
             if obj_size > 0:
                 self.index[obj].append(file_path)
-                for q in self.table_q_dict[obj]:
-                    all_qs.add(q)
+                # for q in self.table_q_dict[obj]:
+                #     all_qs.add(q)
                 if min_obj_size == 0:
                     min_obj_size = obj_size
                 else:
@@ -512,6 +544,8 @@ class PQD:
             else:
                 # We don't care about objects of size 0
                 llist_objs.remove(obj)
+
+        all_qs = self.get_queries(llist_objs)
 
         # If the list is truly empty, then don't write anything at all
         if len(llist_objs) == 0:
@@ -602,3 +636,151 @@ class PQD:
         print("Row group size: " + str(self.rg_size))
         pq.write_table(Table.from_pandas(concat(ordered_chunks).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
+    @remove_index
+    def file_gen_3b(self, file_path, obj_dict):
+        """
+        Generate a file
+        ** This one approximates the best way of ordering leaves
+        - This depends on every obj being smaller than rg_size
+        - This will be asserted
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
+        """
+        # rg_count = -(-self.block_size // self.rg_size)
+        q_dict = {}
+        objs = list(self.obj_dict.keys())
+        total_size = 0
+
+        # Get the frequency with which queries are seen
+        for obj in objs:
+            obj_size = obj_dict[obj].shape[0]
+            assert obj_size <= self.rg_size, f"Object {obj} is too large to be using this method"
+            total_size += obj_size
+            for q in self.table_q_dict[obj]:
+                q_dict[q] = 1 + q_dict.get(q, 0)
+        q_list = list(q_dict.keys())
+
+        # Arrange queries by the sum of the inverse frequency of their queries
+        objs.sort(key=lambda x: sum((1/q_dict[q] for q in self.table_q_dict[x])))
+
+        # Take the first (rg_count - 1) of those queries as the rg bound objects
+        rg_count = -(-total_size // self.rg_size)
+        rg_bounds = objs[0:rg_count - 1]
+        rg_bounds.sort(key=lambda x: obj_dict[x].shape[0])
+        objs = objs[rg_count - 1:]
+
+        # Now, initiate the ordering, and enter the for loop
+        ordering = []
+        current_rg_size = 0
+        for i in range(rg_count):
+            rg_objs = [] # Do not rely on this to be ordered
+            if i > 0:
+                rg_objs.append(rg_bounds[i - 1])
+            if i < (rg_count - 1):
+                rg_objs.append(rg_bounds[i])
+            else:
+                # Empty out everything for the last one
+                for obj in objs:
+                    ordering.append(obj)
+                break
+            end_size = rg_bounds[i].shape[0]
+
+            # Enter the while loop to fill this row group
+            while current_rg_size < (self.rg_size - end_size):
+                # Develop the row group
+                objs.sort(key=lambda x: self.rank_match(rg_objs, x))
+                obj_found = False
+                obj = None
+                j = None
+                assert len(objs) > 0, "Something went wrong here"
+                for j in range(len(objs)):
+                    obj = objs[j]
+                    if (obj_dict[obj].shape[0] + current_rg_size) <= self.rg_size:
+                        obj_found = True
+                        break
+                if not obj_found:
+                    # If the end piece is too small and nothing fits, switch it with the best object here
+                    obj = objs[0]
+                    objs.append(rg_bounds[i])
+                    rg_bounds[i] = obj
+                    _ = objs.pop(0)
+                    break
+                rg_objs.append(obj)
+                ordering.append(obj)
+                current_rg_size += obj_dict[obj].shape[0]
+                _ = objs.pop(j)
+
+            # Add the end piece
+            ordering.append(rg_bounds[i])
+            current_rg_size += obj_dict[rg_bounds[i]].shape[0]
+
+            # Reset the rg_size
+            current_rg_size -= self.rg_size
+
+        # Write the file and finish
+        order = map(lambda x: obj_dict[obj], ordering)
+        print("Ordering:", ordering)
+        pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
+
+    @remove_index
+    def file_gen_3c(self, file_path, obj_dict):
+        """
+        Generate a file
+        ** This one approximates the best way of ordering leaves for when the number of row groups is
+        close to the number of files
+        * All this tries to do is order them so that adjacent ones are similar
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
+        """
+        rg_count = -(-self.block_size // self.rg_size)
+        q_dict = {}
+        objs = list(self.obj_dict.keys())
+
+        # Get the frequency with which queries are seen
+        for obj in objs:
+            for q in self.table_q_dict[obj]:
+                q_dict[q] = 1 + q_dict.get(q, 0)
+        q_list = list(q_dict.keys())
+
+        # Invert the frequencies
+        for q in q_list:
+            q_dict[q] = 1 / q_dict[q]
+
+        # Initialize the ordering
+        ordering = []
+
+        # Start with the best object
+        obj = min(map(lambda x: sum(map(lambda y: q_dict[y], self.table_q_dict[x]))))
+        ordering.append(obj)
+        objs.remove(obj)
+
+        # Keep adding objects until nothing is left
+        while len(objs) > 0:
+            obj = min(map(lambda x: self.rank_match([obj], x, q_dict=q_dict)))
+            ordering.append(obj)
+            objs.remove(obj)
+
+        # Make the file
+        order = map(lambda x: obj_dict[obj], ordering)
+        print("Ordering:", ordering)
+        pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
+
+    @remove_index
+    def file_gen_3d(self, file_path, obj_dict):
+        """
+        Generate a file
+        **This one uses 3a for smaller obj_dict, and an approximation for larger ones
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
+        """
+        cutoff = 20
+        file_count = len(obj_dict.keys())
+        if file_count <= cutoff:
+            # The number of files to arrange is small
+            self.file_gen_3a(file_path, obj_dict)
+        elif max(map(lambda x: self.table_q_dict[x].shape[0])) > self.rg_size:
+            # There exist files that are close to the row group size
+            self.file_gen_3c(file_path, obj_dict)
+        else:
+            # The number of files to arrange is significantly larger than the number of row groups
+            self.file_gen_3b(file_path, obj_dict)
