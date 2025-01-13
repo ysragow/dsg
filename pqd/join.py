@@ -252,14 +252,14 @@ class PQD:
         :return: A score for how well they align - smaller is better
         """
         all_qs = self.get_queries(obj_list)
-        if q_dict is None:
-            q_dict = {}
-            for q in all_qs:
-                q_dict[q] = 1
+
         rank = 0
         for q in self.table_q_dict[obj]:
             if q not in all_qs:
-                rank += q_dict[q]
+                if q_dict is None:
+                    rank += 1
+                else:
+                    rank += q_dict[q]
         return rank
 
     def make_layout_1(self, take_top=True):
