@@ -648,7 +648,7 @@ class PQD:
         """
         # rg_count = -(-self.block_size // self.rg_size)
         q_dict = {}
-        objs = list(self.obj_dict.keys())
+        objs = list(obj_dict.keys())
         total_size = 0
 
         # Get the frequency with which queries are seen
@@ -734,7 +734,7 @@ class PQD:
         """
         rg_count = -(-self.block_size // self.rg_size)
         q_dict = {}
-        objs = list(self.obj_dict.keys())
+        objs = list(obj_dict.keys())
 
         # Get the frequency with which queries are seen
         for obj in objs:
