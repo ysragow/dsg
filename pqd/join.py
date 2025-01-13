@@ -683,7 +683,7 @@ class PQD:
                 for obj in objs:
                     ordering.append(obj)
                 break
-            end_size = rg_bounds[i].shape[0]
+            end_size = obj_dict[rg_bounds[i]].shape[0]
 
             # Enter the while loop to fill this row group
             while current_rg_size < (self.rg_size - end_size):
