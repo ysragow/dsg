@@ -778,7 +778,7 @@ class PQD:
         if file_count <= cutoff:
             # The number of files to arrange is small
             self.file_gen_3a(file_path, obj_dict)
-        elif max(map(lambda x: self.table_q_dict[x].shape[0])) > self.rg_size:
+        elif max(map(lambda x: self.table_q_dict[x].shape[0], obj_dict.keys())) > self.rg_size:
             # There exist files that are close to the row group size
             self.file_gen_3c(file_path, obj_dict)
         else:
