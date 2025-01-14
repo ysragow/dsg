@@ -273,21 +273,21 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         Rank the pred only on how it performs on the blocks
         :param pred: a predicate
         :param q_blocks: a list of blocks representing queries and previous predicates
-        :return: a ranking of the pred; higher is worse
+        :return: a ranking of the pred; higher is BETTER
         """
         neg_pred = pred.flip()
         right_valid = False
         left_valid = False
-        output = 0
+        both_count = 0
         for block in q_blocks:
             right_test = block.test(pred)
             left_test = block.test(neg_pred)
             right_valid |= right_test
             left_valid |= left_test
             if right_test and left_test:
-                output += 1
+                both_count += 1
         if right_valid and left_valid:
-            return output
+            return len(q_blocks) - both_count
         return 0
 
     def pure_workload_rank(pred, workload, prev_preds):
@@ -296,11 +296,11 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         :param pred: a predicate
         :param workload: a workload
         :param prev_preds: previous predicates that apply to the entire workload
-        :return: a ranking of the predicate; higher is worse
+        :return: a ranking of the predicate; higher is BETTER
         """
         w_right, w_left, w_both = workload.split(pred, prev_preds)
         if (len(w_right) > 0) and (len(w_left) > 0):
-            return len(w_both)
+            return len(workload.queries) - len(w_both)
         return 0
 
     if min_size == 0:
