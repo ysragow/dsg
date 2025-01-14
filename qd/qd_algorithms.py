@@ -212,6 +212,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                 # else:
                 #     print("acting on pred:", pred, '                                 ', end='\r')
                 score = rank_fn(subset, table, workload, pred, prev_preds)
+                print(f"Score for pred {pred}: {score}")
                 if score > top_score:
                     best_pred = pred
                     top_score = score
