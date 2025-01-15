@@ -637,6 +637,7 @@ class PQD:
                     opt_order = ordering.ordering
 
         ordered_chunks = list([obj_dict[obj] for obj in opt_order])
+        assert set(opt_order) == set(obj_dict.keys())
         print("Row group size: " + str(self.rg_size))
         pq.write_table(Table.from_pandas(concat(ordered_chunks).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
@@ -723,6 +724,7 @@ class PQD:
 
         # Write the file and finish
         order = map(lambda x: obj_dict[obj], ordering)
+        assert set(ordering) == set(obj_dict.keys())
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
@@ -769,6 +771,7 @@ class PQD:
 
         # Make the file
         order = map(lambda x: obj_dict[obj], ordering)
+        assert set(ordering) == set(obj_dict.keys())
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
