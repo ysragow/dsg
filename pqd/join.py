@@ -745,7 +745,7 @@ class PQD:
         assert len(ordering) == len(obj_dict.keys())
 
         # Write the file and finish
-        order = map(lambda x: obj_dict[obj], ordering)
+        order = map(lambda x: obj_dict[x], ordering)
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
@@ -795,7 +795,7 @@ class PQD:
         assert len(ordering) == len(obj_dict.keys())
 
         # Make the file
-        order = map(lambda x: obj_dict[obj], ordering)
+        order = map(lambda x: obj_dict[x], ordering)
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
