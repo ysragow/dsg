@@ -742,7 +742,7 @@ class PQD:
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
-        print("Ordering from file_gen_3b:", ordering)
+        print("Ordered by file_gen_3b")
         pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
     @remove_index
