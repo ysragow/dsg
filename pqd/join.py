@@ -434,7 +434,7 @@ class PQD:
                     make_alg(file_template.format(i, file_num), eff_dframes[i])
                     gen_size += ParquetFile(file_template.format(i, file_num)).count()
             file_num += 1
-            assert gen_size == og_size
+            assert gen_size == og_size, f"{gen_size} rows were generated from an input of {og_size}"
             total_og_size += og_size
             total_gen_size += gen_size
 
