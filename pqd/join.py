@@ -652,10 +652,7 @@ class PQD:
 
         # Check that the ordering is valid
         assert set(opt_order) == set(obj_dict.keys())
-        order_set = set()
-        for obj in opt_order:
-            assert obj not in order_set, f"{obj} is duplicated"
-            order_set.add(obj)
+        assert len(opt_order) == len(obj_dict.keys())
 
         # Write the file and finish
         ordered_chunks = list([obj_dict[obj] for obj in opt_order])
@@ -745,10 +742,7 @@ class PQD:
 
         # Check that the ordering is valid
         assert set(ordering) == set(obj_dict.keys())
-        order_set = set()
-        for obj in ordering:
-            assert obj not in order_set, f"{obj} is duplicated"
-            order_set.add(obj)
+        assert len(ordering) == len(obj_dict.keys())
 
         # Write the file and finish
         order = map(lambda x: obj_dict[obj], ordering)
@@ -798,10 +792,7 @@ class PQD:
 
         # Check that the ordering is valid
         assert set(ordering) == set(obj_dict.keys())
-        order_set = set()
-        for obj in ordering:
-            assert obj not in order_set, f"{obj} is duplicated"
-            order_set.add(obj)
+        assert len(ordering) == len(obj_dict.keys())
 
         # Make the file
         order = map(lambda x: obj_dict[obj], ordering)
