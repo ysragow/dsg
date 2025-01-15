@@ -650,8 +650,15 @@ class PQD:
                 if ordering.score < best_score:
                     opt_order = ordering.ordering
 
-        ordered_chunks = list([obj_dict[obj] for obj in opt_order])
+        # Check that the ordering is valid
         assert set(opt_order) == set(obj_dict.keys())
+        order_set = set()
+        for obj in opt_order:
+            assert obj not in order_set, f"{obj} is duplicated"
+            order_set.add(obj)
+
+        # Write the file and finish
+        ordered_chunks = list([obj_dict[obj] for obj in opt_order])
         print("Ordered by file_gen_3a")
         pq.write_table(Table.from_pandas(concat(ordered_chunks).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
@@ -736,9 +743,15 @@ class PQD:
             # Reset the rg_size
             current_rg_size -= self.rg_size
 
+        # Check that the ordering is valid
+        assert set(ordering) == set(obj_dict.keys())
+        order_set = set()
+        for obj in ordering:
+            assert obj not in order_set, f"{obj} is duplicated"
+            order_set.add(obj)
+
         # Write the file and finish
         order = map(lambda x: obj_dict[obj], ordering)
-        assert set(ordering) == set(obj_dict.keys())
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
@@ -783,9 +796,15 @@ class PQD:
             ordering.append(obj)
             objs.remove(obj)
 
+        # Check that the ordering is valid
+        assert set(ordering) == set(obj_dict.keys())
+        order_set = set()
+        for obj in ordering:
+            assert obj not in order_set, f"{obj} is duplicated"
+            order_set.add(obj)
+
         # Make the file
         order = map(lambda x: obj_dict[obj], ordering)
-        assert set(ordering) == set(obj_dict.keys())
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
