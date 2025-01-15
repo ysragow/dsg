@@ -189,8 +189,10 @@ class PQD:
         # Initialize table_dict, table_q_dict, and the index
         self.table_dict = {}  # dict mapping file names to corresponding table objects
         self.table_q_dict = {}  # dict mapping file names to list of query ids in the workload which access it
+        self.total_size = 0
         all_objs = index(Query([], table), root_path, table, verbose=verbose)
         for obj in all_objs:
+            self.total_size += ParquetFile(obj).count()
             self.index[obj] = []
             self.table_dict[obj] = table_gen(obj)
             self.table_q_dict[obj] = []
@@ -370,9 +372,13 @@ class PQD:
             if not os.path.exists(folder):
                 os.makedirs(folder)
 
+        total_og_size = 0  # size of input
+        total_gen_size = 0  # size of output
         # Begin the for loop.  Load objects into memory.
         file_num = 0
         for pfile in self.layout:
+            og_size = 0
+            gen_size = 0
             # Initialize variables
             eff_dframes = {}  # Maps n to a dict mapping obj to the slice of the dframes[obj] going into f_path/n/pfile
             for i in range(self.split_factor):
@@ -380,6 +386,7 @@ class PQD:
 
             # Loop through all the objects in the pfile
             for obj in pfile.file_list:
+                og_size += ParquetFile(obj).count()
                 if verbose:
                     print(f"Loading dataframe for file {obj}...", end='\r')
 
@@ -397,6 +404,7 @@ class PQD:
                             n_rows = file_chunk.shape[0]
                             print(f"Making file {chunk_file_name} from file {obj} with {n_rows} rows and {-(-n_rows//self.rg_size)} row groups.")
                         make_alg(chunk_file_name, {obj: file_chunk})
+                        gen_size += ParquetFile(chunk_file_name).count()
                         df_index += 2 * self.block_size
                     file_num += 1
 
@@ -424,8 +432,14 @@ class PQD:
                     print(f"Making file {file_template.format(i, file_num)} with {p_str}")
                 if is_nonzero:
                     make_alg(file_template.format(i, file_num), eff_dframes[i])
+                    gen_size += ParquetFile(file_template.format(i, file_num)).count()
             file_num += 1
+            assert gen_size == og_size
+            total_og_size += og_size
+            total_gen_size += gen_size
 
+        assert total_gen_size == total_og_size
+        assert total_gen_size == self.total_size
         # Save the index
         with open(folder_path + "/index.json", "w") as file:
             dump(self.index, file)
