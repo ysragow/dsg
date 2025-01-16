@@ -465,7 +465,7 @@ class PQD:
                     test_dict = pfile1.test_merge(pfile2)
                     for q, new_files in test_dict.items():
                         score -= split_factor * ((remainders[q] - new_files) // split_factor)
-                        score += remainders[i] - ((remainders[i] - new_files) % split_factor)
+                        score += remainders[q] - ((remainders[q] - new_files) % split_factor)
                     if score > best_score:
                         best_pair = (i, j)
                     # if verbose:
