@@ -469,8 +469,8 @@ class PQD:
                     if score > best_score:
                         best_pair = (i, j)
                         best_score = score
-                    if verbose:
-                        print(f"Score for ({i}, {j}): {score}")
+                    # if verbose:
+                    #     print(f"Score for ({i}, {j}): {score}")
 
             # Break if nothing was found
             if best_score <= 0:
