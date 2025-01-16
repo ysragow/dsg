@@ -443,7 +443,6 @@ class PQD:
                     if obj in file_set:
                         assert i in pfile.queries, f"Query {self.workload[i]} maps to object {obj}, but is not in the queries assigned to access the pfile containing the files {pfile.file_list}."
 
-
         # Initialize the remainders
         remainders = [(-len(s)) % split_factor for s in index_all]
 
@@ -468,7 +467,7 @@ class PQD:
                     if score > best_score:
                         best_pair = (i, j)
                     if verbose:
-                        print(f"Dictionary for ({i}, {j}):", test_dict)
+                        print(f"Queries for {i}: {pfile1.queries}  Queries for {j}: {pfile2.queries})")
 
             # Break if nothing was found
             if best_score <= 0:
