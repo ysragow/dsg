@@ -423,8 +423,8 @@ class PQD:
         """
         A greedy algorithm for pairing together objects
         - For each pfile, keep track of the queries which access it
-        :param split_factor:
-        :return:
+        Modifies the layout
+        :param split_factor: The number of parallel reads which can be performed simultaneously
         """
         if not self.layout_made():
             raise Exception("This function can only be called once the layout is made")
@@ -468,7 +468,7 @@ class PQD:
                     if score > best_score:
                         best_pair = (i, j)
                     if verbose:
-                        print(f"Score for ({i}, {j}):", score)
+                        print(f"Dictionary for ({i}, {j}):", test_dict)
 
             # Break if nothing was found
             if best_score <= 0:
