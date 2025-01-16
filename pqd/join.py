@@ -426,14 +426,12 @@ class PQD:
         :param split_factor:
         :return:
         """
-        print("Massage Layout function entered")
         if not self.layout_made():
             raise Exception("This function can only be called once the layout is made")
         index_all = [set(self.qd_index(q)) for q in self.workload.queries]
         for pfile in self.layout:
             pfile.add_queries(sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[]))
 
-        print("Check reached")
         # Make sure everything lines up
         for pfile in self.layout:
             for q in pfile.queries:
@@ -449,11 +447,10 @@ class PQD:
         # Initialize the remainders
         remainders = [(-len(s)) % split_factor for s in index_all]
 
-        print("About to enter while loop")
         # Enter the while loop
         while remainders != [0]*len(index_all):
             if verbose:
-                print(remainders)
+                print("Remainders:", remainders)
             # Initialize the instruments used for finding the best pair
             best_score = 0
             best_pair = None
@@ -470,6 +467,8 @@ class PQD:
                         score += remainders[i] - ((remainders[i] - new_files) % split_factor)
                     if score > best_score:
                         best_pair = (i, j)
+                    if verbose:
+                        print(f"Score for ({i}, {j}):", score)
 
             # Break if nothing was found
             if best_score <= 0:
