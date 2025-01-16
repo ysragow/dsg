@@ -483,7 +483,7 @@ class PQD:
             # Subtract from the remainders
             for k in range(len(remainders)):
                 if k in best_dict:
-                    remainders[k] = (remainders[k] - best_dict(k)) % split_factor
+                    remainders[k] = (remainders[k] - best_dict[k]) % split_factor
 
             # Make a new layout
             new_layout = []
