@@ -144,8 +144,26 @@ def remove_index(func):
     return f
 
 
+def rg_approx(func):
+    """
+    Decorator for file_gen functions to remove the index column if it exists
+    :param func: a file_gen function of the pqd class, taking in self, file_path, obj_dict
+    :return: A file_gen function, decorated to change the rg size and then change it back
+    """
+    def f(self, file_path, obj_dict):
+        if self.approx_rg_size:
+            total_size = sum(map(lambda x: x.shape[0], obj_dict.values))
+            temp_rg_size = self.rg_size
+            self.rg_size = int(1 + (temp_rg_size * total_size / block_size))
+            func(self, file_path, obj_dict)
+            self.rg_size = temp_rg_size
+        else:
+            func(self, file_path, obj_dict)
+    return f
+
+
 class PQD:
-    def __init__(self, root_path, table, workload, block_size, split_factor, row_group_size=1000000, dp_factor=100, verbose=False):
+    def __init__(self, root_path, table, workload, block_size, split_factor, row_group_size=1000000, dp_factor=100, verbose=False, approx_rg_size=False):
         """
         Initialize a PQD layout
         :param root_path: path to the root file, regardless of whether it exists
@@ -155,7 +173,8 @@ class PQD:
         :param split_factor: How many ways to split the data
         :param row_group_size: Size of row groups that the data is made into
         :param dp_factor: Granularity of the dynamic programming by row count in file_gen_3
-        :param verbose: whether to print stuff in initilization
+        :param verbose: whether to print stuff in initialization
+        :param approx_rg_size: whether to approximate the row group size based on the block size instead of doing exactly what you are told
         """
 
         # Save relevant stuff
@@ -165,6 +184,7 @@ class PQD:
         self.path = '/'.join(split_path[:-1])
         self.split_factor = split_factor
         self.workload = workload
+        self.approx_rg_size = approx_rg_size
 
         # For file_gen_3
         self.rg_size = row_group_size
@@ -528,6 +548,7 @@ class PQD:
         # TODO: Finish this?
 
     @remove_index
+    @rg_approx
     def file_gen_3a(self, file_path, obj_dict):
         """
         Generate a file
@@ -660,6 +681,7 @@ class PQD:
         pq.write_table(Table.from_pandas(concat(ordered_chunks).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
     @remove_index
+    @rg_approx
     def file_gen_3b(self, file_path, obj_dict):
         """
         Generate a file
@@ -753,6 +775,7 @@ class PQD:
         pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
     @remove_index
+    @rg_approx
     def file_gen_3c(self, file_path, obj_dict):
         """
         Generate a file
@@ -802,7 +825,6 @@ class PQD:
         print("Ordered by file_gen_3c")
         pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
-    @remove_index
     def file_gen_3d(self, file_path, obj_dict):
         """
         Generate a file
