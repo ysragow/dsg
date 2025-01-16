@@ -677,7 +677,7 @@ class PQD:
 
         # Write the file and finish
         ordered_chunks = list([obj_dict[obj] for obj in opt_order])
-        print("Ordered by file_gen_3a")
+        print(f"Ordered by file_gen_3a.  Row group size is {self.rg_size}")
         pq.write_table(Table.from_pandas(concat(ordered_chunks).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
     @remove_index
@@ -771,7 +771,7 @@ class PQD:
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
-        print("Ordered by file_gen_3b")
+        print(f"Ordered by file_gen_3b.  Row group size is {self.rg_size}")
         pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
     @remove_index
@@ -822,7 +822,7 @@ class PQD:
         for obj in ordering:
             if obj_dict[obj].shape[0] > 0:
                 self.index[obj].append(file_path)
-        print("Ordered by file_gen_3c")
+        print(f"Ordered by file_gen_3c.  Row group size is {self.rg_size}")
         pq.write_table(Table.from_pandas(concat(order).reset_index(drop=True)), file_path, row_group_size=self.rg_size)
 
     def file_gen_3d(self, file_path, obj_dict):
