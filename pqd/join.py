@@ -154,7 +154,7 @@ def rg_approx(func):
         if self.approx_rg_size:
             total_size = sum(map(lambda x: x.shape[0], obj_dict.values()))
             temp_rg_size = self.rg_size
-            self.rg_size = int(1 + (temp_rg_size * total_size / block_size))
+            self.rg_size = int(1 + (temp_rg_size * total_size / self.block_size))
             func(self, file_path, obj_dict)
             self.rg_size = temp_rg_size
         else:
