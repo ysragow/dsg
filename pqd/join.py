@@ -462,21 +462,26 @@ class PQD:
                     score = 0
                     test_dict = pfile1.test_merge(pfile2)
                     for q, new_files in test_dict.items():
-                        if new_files > remainders[q]:
-                            score = 0
-                            break
-                        score += new_files
+                        score -= split_factor * ((remainders[q] - new_files) // split_factor)
+                        score += remainders[i] - ((remainders[i] - new_files) % split_factor)
                     if score > best_score:
                         best_pair = (i, j)
 
             # Break if nothing was found
-            if best_score == 0:
+            if best_score <= 0:
                 break
 
-            # Otherwise, merge the pair and make a new layout
-            new_layout = []
+            # Otherwise, continue.  Merge the pair
             i, j = best_pair
-            self.layout[i].merge(self.layout[j])
+            best_dict = self.layout[i].merge(self.layout[j])
+
+            # Subtract from the remainders
+            for k in range(len(remainders)):
+                if k in best_dict:
+                    remainders[k] = (remainders[k] - best_dict(k)) % split_factor
+
+            # Make a new layout
+            new_layout = []
             for k in range(len(self.layout)):
                 if k == j:
                     continue
