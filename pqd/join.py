@@ -430,7 +430,7 @@ class PQD:
             raise Exception("This function can only be called once the layout is made")
         index_all = [set(self.qd_index(q)) for q in self.workload.queries]
         for pfile in self.layout:
-            pfile.add_queries(sum([list(self.table_q_dict[obj]) for obj in pfile.file_list]), start=[])
+            pfile.add_queries(sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[]))
 
         # Make sure everything lines up
         for pfile in self.layout:
