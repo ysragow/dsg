@@ -468,8 +468,8 @@ class PQD:
                         score += remainders[q] - ((remainders[q] - new_files) % split_factor)
                     if score > best_score:
                         best_pair = (i, j)
-                    # if verbose:
-                    #     print(f"Queries for {i}: {pfile1.queries}  Queries for {j}: {pfile2.queries}")
+                    if verbose:
+                        print(f"Score for ({i}, {j}): {score}")
 
             # Break if nothing was found
             if best_score <= 0:
