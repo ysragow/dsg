@@ -430,7 +430,9 @@ class PQD:
             raise Exception("This function can only be called once the layout is made")
         index_all = [set(self.qd_index(q)) for q in self.workload.queries]
         for pfile in self.layout:
-            pfile.add_queries(sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[]))
+            new_queries = sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[])
+            print(new_queries)
+            pfile.add_queries(new_queries)
 
         # Make sure everything lines up
         for pfile in self.layout:
@@ -466,8 +468,8 @@ class PQD:
                         score += remainders[i] - ((remainders[i] - new_files) % split_factor)
                     if score > best_score:
                         best_pair = (i, j)
-                    if verbose:
-                        print(f"Queries for {i}: {pfile1.queries}  Queries for {j}: {pfile2.queries})")
+                    # if verbose:
+                    #     print(f"Queries for {i}: {pfile1.queries}  Queries for {j}: {pfile2.queries}")
 
             # Break if nothing was found
             if best_score <= 0:
