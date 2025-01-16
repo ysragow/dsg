@@ -468,6 +468,7 @@ class PQD:
                         score += remainders[q] - ((remainders[q] - new_files) % split_factor)
                     if score > best_score:
                         best_pair = (i, j)
+                        best_score = score
                     if verbose:
                         print(f"Score for ({i}, {j}): {score}")
 
