@@ -135,7 +135,7 @@ class PFile:
         return str(self)
 
     def add_queries(self, queries):
-        self.queries.union(queries)
+        self.queries = self.queries.union(queries)
 
     def test_merge(self, other):
         """
@@ -431,7 +431,7 @@ class PQD:
         index_all = [set(self.qd_index(q)) for q in self.workload.queries]
         for pfile in self.layout:
             new_queries = sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[])
-            print(new_queries)
+            # print(new_queries)
             pfile.add_queries(new_queries)
 
         # Make sure everything lines up
