@@ -104,15 +104,20 @@ def argsort(obj_list, f):
 
 
 class PFile:
-    def __init__(self, file_list, size, is_overflow):
+    def __init__(self, file_list, size, is_overflow, queries=None):
         """
         :param file_list: List of files
         :param size: Number of rows
         :param is_overflow: Whether this is an overflow file
+        :param queries: A set of queries accessed by this pfile
         """
         self.file_list = file_list
+        self.split_factor = 1
         self.size = size
         self.made = False
+        self.queries = queries
+        if queries is None:
+            self.queries = set()
         self.path = 'None'
         self.indices = {}
         for file in file_list:
@@ -128,6 +133,36 @@ class PFile:
 
     def __repr__(self):
         return str(self)
+
+    def add_queries(self, queries):
+        self.queries.union(queries)
+
+    def test_merge(self, other):
+        """
+        Test what would happen if this pfile merged with a different pfile
+        :param other: a different pfile
+        :return: A dictionary mapping query ids to the number of new files this would add to that query
+        """
+        output = {}
+        for q in self.queries:
+            if q not in other.queries:
+                output[q] = other.split_factor
+        for q in other.queries:
+            if q not in self.queries:
+                output[q] = self.split_factor
+        return output
+
+    def merge(self, other):
+        """
+        Merge with another pfile
+        :param other: a different pfile
+        :return: the result of test_merge on the other file, before the merger
+        """
+        output = self.test_merge(other)
+        self.file_list += other.file_list
+        self.queries = self.queries.union(other.queries)
+        self.split_factor += other.split_factor
+        return output
 
 
 def remove_index(func):
@@ -183,7 +218,9 @@ class PQD:
         self.name = '.'.join(split_path[-1].split('.')[:-1])
         self.path = '/'.join(split_path[:-1])
         self.split_factor = split_factor
+        self.split_factors = None  # Used for the new algorithm.  After massaging the layout, this will be defined
         self.workload = workload
+        self.qd_index = lambda query, v=False: index(query, root_path, table, verbose=v)
         self.approx_rg_size = approx_rg_size
 
         # For file_gen_3
@@ -288,7 +325,7 @@ class PQD:
                     rank += q_dict[q]
         return rank
 
-    def make_layout_1(self, take_top=True):
+    def make_layout_1(self, take_top=True, split_factor=None):
         """
         Create self.layout
         Algo specs:
@@ -300,6 +337,10 @@ class PQD:
             - 6. Once no more such files exist or we cannot add another without going over (2 * ABS), return to step 4
         :return: self.layout
         """
+        temp_split_factor = self.split_factor
+        if split_factor is not None:
+            self.split_factor = 1
+
         # Initialize the layout list.  Assign this to self.layout at the end
         layout = []
         # file_dict = {}
@@ -373,9 +414,77 @@ class PQD:
         # Assign the layout to self.layout
         self.layout = layout
         # self.file_dict = file_dict
+        self.split_factor = temp_split_factor
 
     def make_layout_1a(self):
         self.make_layout_1(take_top=False)
+
+    def massage_layout(self, split_factor, verbose=False):
+        """
+        A greedy algorithm for pairing together objects
+        - For each pfile, keep track of the queries which access it
+        :param split_factor:
+        :return:
+        """
+        if not self.layout_made():
+            raise Exception("This function can only be called once the layout is made")
+        index_all = [set(self.qd_index(q)) for q in self.workload.queries]
+        for pfile in self.layout:
+            pfile.add_queries(sum([list(self.table_q_dict[obj]) for obj in pfile.file_list]), start=[])
+
+        # Make sure everything lines up
+        for pfile in self.layout:
+            for q in pfile.queries:
+                assert len(index_all[q].intersection(pfile.file_list)) > 0, f"Query {self.workload.queries[q]} is listed as being in the pfile containing the files {pfile.file_list}, but it only indexes to {index_all[q]}."
+        for i in range(len(index_all)):
+            file_set = index_all
+            for pfile in self.layout:
+                for obj in pfile.file_list:
+                    if obj in file_set:
+                        assert i in pfile.queries, f"Query {self.workload[i]} maps to object {obj}, but is not in the queries assigned to access the pfile containing the files {pfile.file_list}."
+
+        # Initialize the remainders
+        remainders = [(-len(s)) % split_factor for s in index_all]
+
+        # Enter the while loop
+        while remainders != [0]*len(index_all):
+            if verbose:
+                print(remainders)
+            # Initialize the instruments used for finding the best pair
+            best_score = 0
+            best_pair = None
+            for i in range(len(self.layout)):
+                for j in range(i):
+                    pfile1 = self.layout[i]
+                    pfile2 = self.layout[j]
+
+                    # Score the pair
+                    score = 0
+                    test_dict = pfile1.test_merge(pfile2)
+                    for q, new_files in test_dict.items():
+                        if new_files > remainders[q]:
+                            score = 0
+                            break
+                        score += new_files
+                    if score > best_score:
+                        best_pair = (i, j)
+
+            # Break if nothing was found
+            if best_score == 0:
+                break
+
+            # Otherwise, merge the pair and make a new layout
+            new_layout = []
+            i, j = best_pair
+            self.layout[i].merge(self.layout[j])
+            for k in range(len(self.layout)):
+                if k == j:
+                    continue
+                new_layout.append(self.layout[k])
+            self.layout = new_layout
+
+        # Define the split factors to be used when making files
+        self.split_factors = [p.split_factor for p in self.layout]
 
     def make_files(self, folder_path, make_alg, verbose=False):
         """
@@ -384,6 +493,10 @@ class PQD:
         :param make_alg: which file_gen algorithm to use
         :param verbose: how much to print
         """
+        # Set the split factor for each item in the layout
+        if self.split_factors is None:
+            self.split_factors = [self.split_factor] * len(self.layout)
+
         # Make the folders, if they don't exist
         file_template = folder_path + "/" + "{}/" + self.name + "{}.parquet"
         folder_template = folder_path + "/" + "{}"
@@ -396,12 +509,14 @@ class PQD:
         total_gen_size = 0  # size of output
         # Begin the for loop.  Load objects into memory.
         file_num = 0
-        for pfile in self.layout:
+        for k in range(len(self.layout)):
+            split_factor = self.split_factors[k]
+            pfile = self.layout[k]
             og_size = 0
             gen_size = 0
             # Initialize variables
             eff_dframes = {}  # Maps n to a dict mapping obj to the slice of the dframes[obj] going into f_path/n/pfile
-            for i in range(self.split_factor):
+            for i in range(split_factor):
                 eff_dframes[i] = {}
 
             # Loop through all the objects in the pfile
@@ -432,15 +547,15 @@ class PQD:
                 eff_size = self.eff_size_dict[obj]
                 if eff_size == 0:
                     continue
-                ind_size = eff_size // self.split_factor  # size of each chunk
-                cutoff = eff_size % self.split_factor  # cutoff for when to stop adding 1 to size
-                for i in range(self.split_factor):
+                ind_size = eff_size // split_factor  # size of each chunk
+                cutoff = eff_size % split_factor  # cutoff for when to stop adding 1 to size
+                for i in range(split_factor):
                     split_size = ind_size + (1 if i < cutoff else 0)
                     eff_dframes[i][obj] = df[df_index: df_index + split_size]
                     df_index += split_size
 
             # Create each file
-            for i in range(self.split_factor):
+            for i in range(split_factor):
                 is_nonzero = False
                 for dframe in eff_dframes[i].values():
                     is_nonzero = (dframe.shape[0] != 0)
