@@ -426,12 +426,14 @@ class PQD:
         :param split_factor:
         :return:
         """
+        print("Massage Layout function entered")
         if not self.layout_made():
             raise Exception("This function can only be called once the layout is made")
         index_all = [set(self.qd_index(q)) for q in self.workload.queries]
         for pfile in self.layout:
             pfile.add_queries(sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[]))
 
+        print("Check reached")
         # Make sure everything lines up
         for pfile in self.layout:
             for q in pfile.queries:
@@ -443,9 +445,11 @@ class PQD:
                     if obj in file_set:
                         assert i in pfile.queries, f"Query {self.workload[i]} maps to object {obj}, but is not in the queries assigned to access the pfile containing the files {pfile.file_list}."
 
+
         # Initialize the remainders
         remainders = [(-len(s)) % split_factor for s in index_all]
 
+        print("About to enter while loop")
         # Enter the while loop
         while remainders != [0]*len(index_all):
             if verbose:
