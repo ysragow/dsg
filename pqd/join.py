@@ -1,5 +1,6 @@
 from pqd.split import PNode
 from qd.qd_algorithms import index, table_gen
+from qd.qd_predicate_subclasses import intersect
 from qd.qd_query import Query
 from numpy import argsort as np_argsort
 from fastparquet import ParquetFile, write
@@ -9,7 +10,14 @@ from json import dump
 import os
 
 
+# Functions for file_gen
+
 def list_sig(l):
+    """
+    Make a hashable signature for a list
+    :param l: a list
+    :return: The list sorted and transformed into a tuple
+    """
     k = list(l)
     k.sort()
     return tuple(k)
@@ -18,7 +26,7 @@ def list_sig(l):
 def factors(n):
     # Get all factors of a number n
     # Start by getting prime factorization
-    primes = {} # one plus the number of times each prime appears in the prime factorization
+    primes = {}  # one plus the number of times each prime appears in the prime factorization
     i = 2
     assert n > 0, "n needs to be greater than 0"
     assert n == int(n), "n needs to be an integer"
@@ -48,6 +56,8 @@ def factors(n):
         output.append(new_num)
     return output
 
+
+# LList and associated functions
 
 class LList:
     def __init__(self, obj_list):
@@ -103,21 +113,25 @@ def argsort(obj_list, f):
     return list([obj_list[i] for i in np_argsort([f(obj) for obj in obj_list])])
 
 
+# The PFile Class
+
 class PFile:
-    def __init__(self, file_list, size, is_overflow, queries=None):
+    def __init__(self, file_list, size, is_overflow):
         """
         :param file_list: List of files
         :param size: Number of rows
         :param is_overflow: Whether this is an overflow file
-        :param queries: A set of queries accessed by this pfile
         """
         self.file_list = file_list
         self.split_factor = 1
         self.size = size
         self.made = False
-        self.queries = queries
-        if queries is None:
-            self.queries = set()
+
+        # Initialize the queries (set of all queries that access this group of files),
+        # and the relevant columns (dict mapping numeric columns accessed by this group of files to their bounds)
+        self.queries = {}
+        self.relevant_columns = {}
+
         self.path = 'None'
         self.indices = {}
         for file in file_list:
@@ -134,8 +148,25 @@ class PFile:
     def __repr__(self):
         return str(self)
 
-    def add_queries(self, queries):
-        self.queries = self.queries.union(queries)
+    def add_queries(self, q_ids, q_objs):
+        """
+        Add queries to the current set of queries
+        :param q_ids: a list of query ids
+        :param q_objs: a list of query objects associated with those ids
+        """
+        # self.queries = self.queries.union(q_ids)
+        for i in range(len(q_ids)):
+            q_id = q_ids[i]
+            p_list = filter(lambda x: x.column.numerical & x.comparative, q_objs[i].list_preds())
+            q_obj = Query(p_list, q_objs[i].table)
+            self.queries[q_id] = q_obj
+            for p in q_obj.list_preds():
+                # We only care about columns that 1. we haven't seen before 2. are numerical and 3. non-comparative
+                if p.column.numerical & (not p.comparative) & (p.column.name not in self.relevant_columns):
+                    c_name = p.column.name
+                    c_max = max([ParquetFile(f).statistics['max'][c_name][0] for f in self.file_list])
+                    c_min = min([ParquetFile(f).statistics['min'][c_name][0] for f in self.file_list])
+                    self.relevant_columns[c_name] = (c_min, c_max)
 
     def test_merge(self, other):
         """
@@ -164,6 +195,8 @@ class PFile:
         self.split_factor += other.split_factor
         return output
 
+
+# Decorators for file_gen functions
 
 def remove_index(func):
     """
@@ -196,6 +229,8 @@ def rg_approx(func):
             func(self, file_path, obj_dict)
     return f
 
+
+# The PQD Class
 
 class PQD:
     def __init__(self, root_path, table, workload, block_size, split_factor, row_group_size=1000000, dp_factor=100, verbose=False, approx_rg_size=False):
@@ -419,12 +454,79 @@ class PQD:
     def make_layout_1a(self):
         self.make_layout_1(take_top=False)
 
-    def massage_layout(self, split_factor, verbose=False):
+    @staticmethod
+    def score_func_1a(split_factor, remainders, pfile1, pfile2):
+        """
+        Calculate the score
+        * This one only uses the number of remaining files
+        ** It blocks any merge that would result in going over the remainder
+        :param split_factor: The split factor
+        :param remainders: Negative the number of files accessed by each query, mod the split factor
+        :param pfile1: A pfile object
+        :param pfile2: Another pfile object
+        :return: A score of how good merging these pfiles would be.  Higher is better.
+        """
+        score = 0
+        test_dict = pfile1.test_merge(pfile2)
+        for q, new_files in test_dict.items():
+            # score -= split_factor * ((remainders[q] - new_files) // split_factor)
+            # score += remainders[q] - ((remainders[q] - new_files) % split_factor)
+            score += new_files
+            if new_files > remainders[q]:
+                return 0
+        return score
+
+    @staticmethod
+    def score_func_1b(split_factor, remainders, pfile1, pfile2):
+        """
+        Calculate the score
+        * This one only uses the number of remaining files
+        ** It punishes going over the remainder by subtracting the split factor from the score
+        :param split_factor: The split factor
+        :param remainders: Negative the number of files accessed by each query, mod the split factor
+        :param pfile1: A pfile object
+        :param pfile2: Another pfile object
+        :return: A score of how good merging these pfiles would be.  Higher is better.
+        """
+        score = 0
+        test_dict = pfile1.test_merge(pfile2)
+        for q, new_files in test_dict.items():
+            score -= split_factor * ((remainders[q] - new_files) // split_factor)
+            score += remainders[q] - ((remainders[q] - new_files) % split_factor)
+        return score
+
+    @staticmethod
+    def score_func_2a(split_factor, remainders, pfile1, pfile2):
+        """
+        Calculate the score
+        * This one uses the number of remaining files and the bounds
+        ** It blocks any merge where queries that only access one of the pfiles cannot differentiate between the pfiles
+        ** It also blocks any merge that would result in going over the remainder
+        :param split_factor: The split factor
+        :param remainders: Negative the number of files accessed by each query, mod the split factor
+        :param pfile1: A pfile object
+        :param pfile2: Another pfile object
+        :return: A score of how good merging these pfiles would be.  Higher is better.
+        """
+        score = 0
+        test_dict = pfile1.test_merge(pfile2)
+        for q, new_files in test_dict.items():
+            score += new_files
+
+            if new_files > remainders[q]:
+                return 0
+        return score
+
+
+
+    def massage_layout(self, split_factor, score_func, verbose=False):
         """
         A greedy algorithm for pairing together objects
         - For each pfile, keep track of the queries which access it
         Modifies the layout
         :param split_factor: The number of parallel reads which can be performed simultaneously
+        :param score_func: The function used to calculate the score
+        :param verbose: whether to print things
         """
         if not self.layout_made():
             raise Exception("This function can only be called once the layout is made")
@@ -432,7 +534,7 @@ class PQD:
         for pfile in self.layout:
             new_queries = sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[])
             # print(new_queries)
-            pfile.add_queries(new_queries)
+            pfile.add_queries(new_queries, [self.workload[q_id] for q_id in new_queries])
 
         # Make sure everything lines up
         for pfile in self.layout:
@@ -468,15 +570,7 @@ class PQD:
                     pfile2 = self.layout[j]
 
                     # Score the pair
-                    score = 0
-                    test_dict = pfile1.test_merge(pfile2)
-                    for q, new_files in test_dict.items():
-                        # score -= split_factor * ((remainders[q] - new_files) // split_factor)
-                        # score += remainders[q] - ((remainders[q] - new_files) % split_factor)
-                        score += new_files
-                        if new_files > remainders[q]:
-                            score = 0
-                            break
+                    score = score_func(split_factor, remainders, pfile1, pfile2)
                     if score > best_score:
                         best_pair = (i, j)
                         best_score = score
@@ -651,37 +745,6 @@ class PQD:
         for obj in obj_dict.keys():
             self.index[obj].append(file_path)
 
-    @remove_index
-    def file_gen_2(self, file_path, obj_dict):
-        """
-        Generate a file
-        **This one organizes row groups only according file size and which queries access what**
-        :param file_path: Folder for storing things in
-        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
-        """
-        pass
-
-    @remove_index
-    def file_gen_3(self, file_path, obj_dict):
-        """
-        Generate a file
-        **This one adds another column for ease of row group skipping**
-        :param file_path: Folder for storing things in
-        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
-
-        """
-        pass
-
-
-
-        # repeated knn clustering!!!
-
-        changed = False
-
-        while not changed:
-            pass
-
-        # TODO: Finish this?
 
     @remove_index
     @rg_approx
