@@ -514,7 +514,7 @@ class PQD:
         # Make the folders, if they don't exist
         file_template = folder_path + "/" + "{}/" + self.name + "{}.parquet"
         folder_template = folder_path + "/" + "{}"
-        for i in range(max(self.split_factors.values())):
+        for i in range(max(self.split_factors)):
             folder = folder_template.format(i)
             if not os.path.exists(folder):
                 os.makedirs(folder)
