@@ -464,8 +464,12 @@ class PQD:
                     score = 0
                     test_dict = pfile1.test_merge(pfile2)
                     for q, new_files in test_dict.items():
-                        score -= split_factor * ((remainders[q] - new_files) // split_factor)
-                        score += remainders[q] - ((remainders[q] - new_files) % split_factor)
+                        # score -= split_factor * ((remainders[q] - new_files) // split_factor)
+                        # score += remainders[q] - ((remainders[q] - new_files) % split_factor)
+                        score += new_files
+                        if new_files > remainders[q]:
+                            score = 0
+                            break
                     if score > best_score:
                         best_pair = (i, j)
                         best_score = score
@@ -510,7 +514,7 @@ class PQD:
         # Make the folders, if they don't exist
         file_template = folder_path + "/" + "{}/" + self.name + "{}.parquet"
         folder_template = folder_path + "/" + "{}"
-        for i in range(self.split_factor):
+        for i in range(max(self.split_factors.values())):
             folder = folder_template.format(i)
             if not os.path.exists(folder):
                 os.makedirs(folder)
