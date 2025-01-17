@@ -110,3 +110,347 @@ Code to Make
 - Proposed Work
 	- For proposed work, star with clear definition of problem statement 
 	- Merge file formats section into partitioning schemes section 
+
+X Put everything on ssd 
+X Optimize indexing (use binary search)
+X Break up everything into indexing, generation, and querying.  Measure the time of indexing and querying independently.
+- Get a flamegraph for querying, and maybe for indexing
+- Code up an example of if it is faster to split partitions up among different files
+X Increase the number of partitions by 2x; plot it on a logarithmic scale
+X Have a different plot which shows the bandwidth (how many gigabytes read per second)
+
+- Make sure to flush the cache
+- Use parallelism on larger quantities of larger files
+- Look into why the regular reads are acting strangely (not decreasing when the fiile size decreases, even when the files read remains the same)
+- Change the selectivity of the query to 1%
+X Plot single thread on the same plot as parallel
+X Put everything into one row group
+- Work on example
+	- Generate
+		- Terms
+			- f: # of files in the chunk
+			- k: # ratio between the query selectivities
+		- Each set of files that the larger query falls into is designated as a "chunk"
+		- Divide the chunk into kf row groups
+			- Determine row group size
+		- Criteria
+			- Row group i will be assigned to file ((i mod k) + (i // k)) mod f.
+		- Using the above criteria, figure out which queries (row groups) will be assigned to each file
+		- Use the read-write function to write all of those row groups, sorted, to a file.
+			- Max row group size should be predetermined row group size
+	- Index
+		- Match chunks instead of files
+		- Return every file in every matching chunk
+
+- Ensure correctness of code
+	- Profile the querying to find out where time is being spent
+	- Debugging!
+- Keep working on example
+
+- Try and make numbers line up for 1000 partitions
+
+- Find a simple Parquet library, and use that to read it manually
+- Give Siva permissions for your McGraw files
+- Verify the correctness of the output - make sure the outputs are the same, etc (sort it and ensure it is the same)
+- Ensure that the data which comes out is arranged in the way you think it should be
+
+- Put both new and old layouts into one plot and include the sequential scans
+- Control the row groups for the old layout, then redo the queries
+- Split between 0.1 and 0.01
+- Make an actual workload
+- Make a linear plot; use it to calculate an appropriate ratio of 0.1 to 0.01
+- Thesis proposal: how to change the QD-tree algorithm to optimize the layouts on *given* workloads (as opposed to constructed workloads) given the number of processing cores
+	- Also talk about how the optimal block size changes significantly between layouts
+
+- Run a profile for sequential reads 
+- Write down an explanation of the math done and the plot
+- Make a regression analysis on a fixed file size (i.e. fixed partition size)
+- Do regression analysis on a signficantly smaller file size (i.e., 1 - 10 MB)
+- Play around with the row group size (if you have time)
+
+- Introduction
+	- Why partitioning schemes / layouts are important
+	- The current landscape
+	- What is missing, and what I hope to solve
+	- How to solve, and why it is challenging
+- Related Work
+	- Tsunami, Flood, QD-Tree, Pando (look into them, and look into the papers they cite)
+	- Explain what makes my layout different
+- Proposed Work
+	- Algorithm
+	- Proof of Concept
+- Timeline
+	- Arbitrary Queries
+	- Port to S3
+	- Develop Algorithm
+	- Benchmarking with TPCH
+	- Benchmarking with TPCDS
+	- Write Thesis
+- Bibliography
+
+- Edits Suggestions:
+	- Abstract should be a summary of the intro
+	- Use the manufactured example as the example in the intro
+		- Use figures to show how the row groups are organized
+		- Be exact and synthetic
+	- Use more systems-y language
+		- instead of "entering a file" saying "performing a seek" or "a random access"
+		- You are reading things in parallel from storage, not necessarily "multicore"
+		- inter-query parallelism vs intra-query parallelism, not that they are forced to be in a specific order
+		- Filters
+		- 'datapoints' to 'elements'
+		- Read papers to get a better grasp of systems language, including the thesis that Siva sent
+		- Say "parallel read" instead of "core"
+		- Define more terms (parallelism-aware)
+	- Give a high-level overview of the row group mixing
+	- Write the problem statement at the beginning of the algorithm, and in the introduction
+	- Do a better job explaining the main advantage of your approach
+		- You don't need to talk about the fact that you take specs aside from parallelism into account
+		- Set up the example clearly, and show clearly how Qd-tree will lay it out
+		- Explain that modern partitioning schemes do not take advantage of row groups skipping
+	- You don't have to be as specific as "at most 101/11%" in an example
+	- Overview of modern partitioning schemes should be much smaller - condense it, and speak less about other schemes
+	- Be consistent about cloud - not on disk
+	- Don't worry about sequential execution
+	- Don't just describe what the related work does (aside from Qd-tree, but still condense it) in multiple paragraphs - just describe how it's different from what I plan to do
+		- Flood/Tsunami are in memory; Qd-tree does not take advantage of parallelism; Pando does not optimize for row group skipping
+
+- Further things to change
+	- Write the selectivities of the workloads
+	- Be more explicit
+	- Make the entire set of partitions, use ... to include all of them
+
+- Break things up into more chunks
+- Look at TPCH
+	- Find out how TPCH works
+		- Find out how to use the data generator
+			- Join all the tables together into one large table
+		- Find out how to use the query generator
+			- Make it in python so that the queries are in a form you can use
+				- Make sure the queries are looking into the one big table, instead of the individual tables
+		- Search for tpch-dbgen
+	- Generate the data once
+	- Look into oltp-benchmark
+- Develop algorithm
+	- Clean up the qd code
+	- Make qd_params.py to include the same kind of stuff that parquet/params.py includes
+	- Change Table class (qd_table.py) to use parquet instead of csv
+		- Make writing for parquet
+		- Make querying for parquet
+	- Change tree_gen (qd_algorithms.py) to allow for row mixing
+
+
+- Have TPC-H ready
+	- Have data available, maybe 1 gb
+	- Support a workload with five of the TPC-H templates - make a workload with 10 of each, and then 20 of each
+		- Implement Template class
+			- Test
+		- 
+	- Find the optimal qd-tree layout on the workload (mess around with the block size)
+	- Plot performance (sans parallelism) against a benchmark such as range predicate
+- Integrate QD-tree with parallelism
+	- Change Table class to Parquet
+		- Change split function to parquet
+		- Change get_boundaries function to parquet
+		- Add to_dnf to each subclass of Predicate
+		- Test
+
+- Get back to Sam with a fix
+- For now, for comparative predicates, simply test if the exact comparative predicate exists
+
+- WORK ON ALGORITHM
+	- Splitting until cannot split anymore seems to make trees that are far too big to be practical.
+		- Narrow the conditions upon which a node is allowed to split
+			- Allow for "max overlap ratio" perhaps, where a node can only split if less than the max overlap ratio goes down both 	
+			- Maybe a constant number must separate len(both_wkld) from len(workload)
+	- Splitting with the condition that both children must have fewer queries than the parent seems to work a lot better.
+		- However, it leaves behind sections containing at least 42 percent of the initial workload.  Perhaps this is too restrictive?
+		- Will try on a larger workload
+		- Okay so the subsets are still way too big.  I realized that mandating that both sides have less than the initial number of queries *heavily* discourages range indexes (cuz if they all overlap at some point, then that point must be on some side).  So, back to the both sides factor idea.
+		- It may be better to include some factor about the overlap of queries within each subset?  Although that may be hard to do...
+	- Table of Too Big/Too Small
+		- wkld: 500, factor: 0.95  depth: 22, max_size: 185, min_size: 10
+		- wkld: 500, factor: 0.9  depth: , max_size: 178, min_size: 19
+		- wkld: 50, factor: 0.9, depth: , max_size: , min_size: 
+		- wkld: 500, factor: 0.6, {'max': 478, 'min': 1, 'average': 112.6, 'depth': 8, 'leaves': 15}
+		- wkld: 500, factor: 0.7, {'max': 478, 'min': 1, 'average': 117.953125, 'depth': 12, 'leaves': 64}
+		- wkld: 500, factor: 0.66, {'max': 483, 'min': 1, 'average': 112.69444444444444, 'depth': 10, 'leaves': 36}
+		- wkld: 500, factor: 0.55, {'max': 464, 'min': 1, 'average': 167.4, 'depth': 4, 'leaves': 5}
+		- wkld: 500, factor: 0.76, {'max': 417, 'min': 3, 'average': 127.9047619047619, 'depth': 20, 'leaves': 147}
+
+	- Throw together something rudimentary...
+
+Best Column for Baseline:
+- {"pooled": {"l_receiptdate": {"10": 491.59350061416626}, "l_shipdate": {"10": 418.7551236152649}, "l_commitdate": {"10": 440.92805790901184}, "o_orderdate": {"10": 463.79172134399414}}}
+- So l_shipdate is the best baseline column
+
+Row Group Arrangement
+- Default seems fine so far...
+- What is going on?  10-500000 is completely broken, and everything I and undo doesn't seem to help.  But 10-1000000 and 10-2000000 are fine.  What's the difference?  The one difference between them seems to be that 10-500000 has an index column and the others do not.  I should figure out how to use row group skipping without that damned index column...
+- Maybe I should try manual row group skipping using pyarrow's read_row_group?  But that would be sooooooooooooooo slow...
+- Clearing up the index bug (setting index=False on to_pandas) seems to have resolved the issue
+- However, giving each file chunk its own row group seems to be a terrible idea and is really slow, taking more than 4 times as long on 10-500000
+	- OR MAYBE THAT'S MORE INDEXING BUG FVNRKJFNERFKJNREFKJNREFKJNFRENFKERNFKJRENF
+	- Update: it was more indexing bug
+
+- Fastparquet's row_group_offset parameter doesn't actually make the offsets exactly where it says it will.  So, we need to abandon file_gen_1a
+- Gonna make file_gen_2 now: the cool clustering algorithm
+
+Splitting Algorithm:
+- Splitting it all the way with decreasing factor doesn't work well, as either it splits infinitely, or you are left with massive chunks of data
+	- Need to figure out a way to break down those chunks
+
+- Make a really large file to see if row group skipping works with pyarrow
+- Do a sanity check to ensure that 10 row groups per file actually makes row group skipping faster
+- Play around with the selectivity of the queries.  Play around with the size of the blocks.  Try much larger queries on the constructed data
+	- Check 10e7 with no row groups.  Check 10e6 with row groups.
+- Talk with the department about extension
+- Check your code for bugs or performance optimization 
+- Meet with Sam next Thursday
+
+
+
+
+
+
+- Queries on Constructed Data:
+
+
+Block Size	Row Groups	Split Factor	IndexDropped	File Size	1%		10%		100%
+10e8		10		10		No		1548 MB		0.9116*		3.39		29.2
+10e8		10		10		Yes		1155 MB		2.545		2.5454		21.75
+10e8		1		10		No		1542 MB		NA		NA		30.6
+10e8		1		10		Yes		1150 MB		NA		NA		22.86
+10e8		10		1		Yes		1154 MB		0.891		8.46		29.309
+10e8		1		1		No		1548 MB		NA		5.157		22.4343
+10e8		1		1		No		1150 MB		NA		5.110		22.4457
+10e7		10		10		No		162 MB		0.50		3.2		31.4
+10e7		10		10		Yes		120 MB				2.39		23.27
+10e7		1		10		No		150 MB		3.39263		3.3935		29.8
+10e7		10		1		No		120 MB		0.646		2.39		23.12
+10e7		1		1		No		115 MB		0.614		2.52		22.23
+10e6		10		10		No		15.7 MB		0.40867		3.49		32.5
+10e6		1	   	10		No		12 MB		0.378		2.52		22.95
+10e6		10		1		No		15.7 MB		0.407		3.5347		32.78
+10e6		1		1		No		12 MB		0.381		2.52		23.04
+10e5		1		1		No		1.57 MB		0.455		3.756		36.56
+10e4		1		1		No		154 KB		1.112		10.34		101.8
+
+
+
+Block Size	Row Groups	Split Factor	File Size	1%		10%		100%
+10e8		10		10		1155 MB		2.545		2.5454		21.75
+10e8		1		10		1150 MB		NA		NA		22.86
+10e8		10		1		1154 MB		0.891*		8.46		29.309
+10e8		1		1		1150 MB		NA		5.069		22.4734
+
+10e7		10		10		120 MB		0.395		2.388		23.19
+10e7		1		10		115 MB		2.52		2.513		22.2806
+10e7		10		1		120 MB		0.655		2.384		23.14
+10e7		1		1		115 MB		0.596		2.547		22.0531
+
+10e6		10		10		15.7 MB		0.415		3.51		32.60
+10e6		1		10		12 MB		0.367		2.5146		22.9958
+10e6		10		1		15.7 MB		0.411		3.5086		32.556
+10e6		1		1		12.0 MB		0.377		2.501		22.89
+
+10e5		1		1		1.57 MB		0.447		3.69		35.70
+10e4		1		1		154 KB		1.116		10.47		103.4
+
+Rows	Files	F Size	Mixed?	RGs	RG Size	Times
+10e8	10	10e8	Y	10	10e7	2.5454
+10e9	10	10e8	Y	100	10e7	21.75
+10e9	10	10e8	N	100	10e7	29.309
+10e7	10 	10e7	Y	10	10e6	0.395
+10e8	10	10e7	Y	100	10e6	2.388
+10e9	100	10e7	Y	1000	10e6	23.19
+10e8	10	10e7	Y	10	10e7	2.513
+10e8	100	10e7	Y	100	10e7	22.2806
+10e8	10	10e7	N	100	10e6	2.384
+10e9	100	10e7	N	1000	10e6	23.14
+10e8	10	10e7	N	10	10e7	2.547
+10e9	100	10e7	N	100	10e7	22.0531
+10e7	10	10e6	Y	100	10e5	0.415
+10e8	100	10e6	Y	1000	10e5	3.51
+10e9	1000	10e6	Y	10000	10e5	32.60
+10e7	10	10e6	Y	10	10e6	0.367
+10e8	100	10e6	Y	100	10e6	2.5146
+10e9	1000	10e6	Y	1000	10e6	22.9958
+10e7	10	10e6	N	100	10e5	0.411
+10e8	100	10e6	N	1000	10e5	3.5086
+10e9	1000	10e6	N	10000	10e5	32.556
+10e7	10	10e6	N	10	10e6	0.377
+10e8	100	10e6	N	100	10e6	2.501
+10e9	1000	10e6	N	1000	10e6	22.89
+10e7	100	10e5	N	100	10e5	0.447
+10e8	1000	10e5	N	1000	10e5	3.69
+10e9	10000	10e5	N	10000	10e5	35.70
+	
+
+
+* This gets lucky with the ordering of the row groups - each 1% maps exactly to a single row group
+
+Partitioning	1%, 1	1%, 2	1%, 3		10%, 1	10%, 2	10%, 3		100%, 1	100%, 2	100%, 3
+10e7, 10, 10	0.387	0.393	0.393		2.390	2.391	2.389		23.065	23.079	23.047
+10e6, 1,  10	0.363	0.381	0.380		2.508	2.504	2.503		22.883	22.992	22.924
+10e6, 1,   1	0.375	0.378	0.379		2.510	2.514	2.523		22.955	22.963	22.978
+
+- Use larger data sizes
+- Make sure you are milking the SSD bandwidth as much as possible
+	- Try using different numbers of row groups and different numbers of processes, until you can optimize the bandwidth.  Also try different query sizes.
+	- Find the block size that optimizes the bandwidth
+- Fill out the rest of the table for sanity check
+
+- Make QD-Trees from multiple files
+
+- Add an extra file to the pqd layout containing a path to the source tree
+
+Source: 50000  Workload: tpch_workload_1
+
+Split Factor	Block Size	Row Group Size	Time	 
+1		500000		500000		176.50	
+2		500000		250000		162.39
+5		500000		100000		181.29
+10		500000		50000		229.88
+1		500000		250000		161.65
+5		500000		250000		176.57
+10		500000		250000		209.93
+1		1000000		250000		200.19
+2		1000000		250000		193.59
+5		1000000		250000		213.51
+10		1000000		250000		225.73
+1		250000		250000		134.97
+2		250000		250000		145.13
+5		250000		250000		156.85
+10		250000		250000		173.20
+1		250000		125000		
+2		250000		125000
+5		250000		125000
+10		250000		125000
+1		125000		125000		128.54
+2		125000		125000		134.41
+5		125000		125000		142.56
+10		125000		125000		161.49
+1		75000		75000		126.40
+2		75000		75000		130.67
+5		75000		75000		146.66
+10		75000		75000		151.96
+
+
+Adjusted rg size
+
+Split Factor	Source 	Block Size	Row Group Size	Time: wkld_1	Avg Time: 1	Avg Time: 10	Avg Time: 12	Avg Time: 3	Avg Time: 4
+1		50000	100000		50000		124.92		9.991		0.935		0.751		0.505		
+2		50000	100000		50000		132.81		9.888		1.356		1.070		0.653		
+5		50000	100000		50000		142.66		9.961		1.986		1.287		0.889		
+10		50000	100000		50000		154.95		9.981		2.805		1.696		0.931		
+
+qd		50000	50000		50000		123.
+
+X Consider reworking algorithm around having a default split factor of 1, then querying, and only rearranging if certain queries access less than the split factor
+- Change score function
+- Make the PFile object take column boundaries into account
+	- Make a new score function that, for each query, makes the score contributed by that query zero if it cannot distinguish between the two files.
+- Make row groups only a thing on split files
+- Maybe change the layout function to also account for bounds?  Or maybe not since that only matters for files with row groups.
+
