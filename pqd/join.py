@@ -524,11 +524,11 @@ class PQD:
             score += new_files
             if q not in pfile1.queries:
                 # Then it must be from pfile2, so we need to make sure it won't enter pfile1
-                if intersect(tuple(pfile2.queries[q].list_preds) + pfile1.all_preds):
+                if intersect(tuple(pfile2.queries[q].list_preds()) + pfile1.all_preds):
                     return 0
             if q not in pfile2.queries:
                 # Then it must be from pfile1, so we need to make sure it won't enter pfile2
-                if intersect(tuple(pfile1.queries[q].list_preds) + pfile2.all_preds):
+                if intersect(tuple(pfile1.queries[q].list_preds()) + pfile2.all_preds):
                     return 0
             if new_files > remainders[q]:
                 return 0
