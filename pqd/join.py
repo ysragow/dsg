@@ -440,7 +440,7 @@ class PQD:
                 assert len(index_all[q].intersection(pfile.file_list)) > 0, f"Query {self.workload.queries[q]} is listed as being in the pfile containing the files {pfile.file_list}, but it only indexes to {index_all[q]}."
         file_counts = []
         for i in range(len(index_all)):
-            file_set = index_all
+            file_set = index_all[i]
             file_count = 0
             for pfile in self.layout:
                 accessed = False
