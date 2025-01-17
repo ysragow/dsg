@@ -550,7 +550,7 @@ class PQD:
         for pfile in self.layout:
             new_queries = sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[])
             # print(new_queries)
-            pfile.add_queries(new_queries, [self.workload[q_id] for q_id in new_queries])
+            pfile.add_queries(new_queries, [self.workload.queries[q_id] for q_id in new_queries])
 
         # Make sure everything lines up
         for pfile in self.layout:
