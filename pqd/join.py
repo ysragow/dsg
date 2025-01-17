@@ -1,6 +1,6 @@
 from pqd.split import PNode
 from qd.qd_algorithms import index, table_gen
-from qd.qd_predicate_subclasses import intersect
+from qd.qd_predicate_subclasses import intersect, Numerical, Operator
 from qd.qd_query import Query
 from numpy import argsort as np_argsort
 from fastparquet import ParquetFile, write
@@ -131,6 +131,7 @@ class PFile:
         # and the relevant columns (dict mapping numeric columns accessed by this group of files to their bounds)
         self.queries = {}
         self.relevant_columns = {}
+        self.all_preds = ()
 
         self.path = 'None'
         self.indices = {}
@@ -164,9 +165,11 @@ class PFile:
                 # We only care about columns that 1. we haven't seen before 2. are numerical and 3. non-comparative
                 if p.column.numerical & (not p.comparative) & (p.column.name not in self.relevant_columns):
                     c_name = p.column.name
+                    column = p.column
                     c_max = max([ParquetFile(f).statistics['max'][c_name][0] for f in self.file_list])
                     c_min = min([ParquetFile(f).statistics['min'][c_name][0] for f in self.file_list])
-                    self.relevant_columns[c_name] = (c_min, c_max)
+                    self.relevant_columns[c_name] = (Numerical(Operator('>='), column, c_min), Numerical(Operator('<='), column, c_max))
+            self.all_preds = sum(self.relevant_columns.values(), start=())
 
     def test_merge(self, other):
         """
@@ -256,6 +259,7 @@ class PQD:
         self.split_factors = None  # Used for the new algorithm.  After massaging the layout, this will be defined
         self.workload = workload
         self.qd_index = lambda query, v=False: index(query, root_path, table, verbose=v)
+        self.q_gen = lambda p_list: Query(p_list, table)
         self.approx_rg_size = approx_rg_size
 
         # For file_gen_3
@@ -319,6 +323,7 @@ class PQD:
         for file in self.files_list:
             self.eff_size_dict[file] = self.table_dict[file].size % (2 * self.abstract_block_size)
 
+    # General helper functions
     def layout_made(self):
         return self.layout is not None
 
@@ -359,6 +364,10 @@ class PQD:
                 else:
                     rank += q_dict[q]
         return rank
+
+    # Make layout functions
+    def make_layout_qd(self):
+        self.layout = [PFile([f], ParquetFile(f).count(), False) for f in self.qd_index(self.q_gen([]))]
 
     def make_layout_1(self, take_top=True, split_factor=None):
         """
@@ -454,6 +463,7 @@ class PQD:
     def make_layout_1a(self):
         self.make_layout_1(take_top=False)
 
+    # Score functions for layout massaging
     @staticmethod
     def score_func_1a(split_factor, remainders, pfile1, pfile2):
         """
@@ -512,13 +522,19 @@ class PQD:
         test_dict = pfile1.test_merge(pfile2)
         for q, new_files in test_dict.items():
             score += new_files
-
+            if q not in pfile1.queries:
+                # Then it must be from pfile2, so we need to make sure it won't enter pfile1
+                if intersect(tuple(pfile2.queries[q].list_preds) + pfile1.all_preds):
+                    return 0
+            if q not in pfile2.queries:
+                # Then it must be from pfile1, so we need to make sure it won't enter pfile2
+                if intersect(tuple(pfile1.queries[q].list_preds) + pfile2.all_preds):
+                    return 0
             if new_files > remainders[q]:
                 return 0
         return score
 
-
-
+    # Layout post-processing functions
     def massage_layout(self, split_factor, score_func, verbose=False):
         """
         A greedy algorithm for pairing together objects
@@ -694,6 +710,7 @@ class PQD:
         with open(folder_path + "/index.json", "w") as file:
             dump(self.index, file)
 
+    # file_gen functions for make_files
     @remove_index
     def file_gen_1(self, file_path, obj_dict):
         """
