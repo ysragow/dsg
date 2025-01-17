@@ -438,15 +438,22 @@ class PQD:
         for pfile in self.layout:
             for q in pfile.queries:
                 assert len(index_all[q].intersection(pfile.file_list)) > 0, f"Query {self.workload.queries[q]} is listed as being in the pfile containing the files {pfile.file_list}, but it only indexes to {index_all[q]}."
+        file_counts = []
         for i in range(len(index_all)):
             file_set = index_all
+            file_count = 0
             for pfile in self.layout:
+                accessed = False
                 for obj in pfile.file_list:
                     if obj in file_set:
                         assert i in pfile.queries, f"Query {self.workload[i]} maps to object {obj}, but is not in the queries assigned to access the pfile containing the files {pfile.file_list}."
+                        if not accessed:
+                            accessed = True
+                            file_count += 1
+            file_counts.append(file_count)
 
         # Initialize the remainders
-        remainders = [(-len(s)) % split_factor for s in index_all]
+        remainders = [(-s) % split_factor for s in file_counts]
 
         # Enter the while loop
         while remainders != [0]*len(index_all):
