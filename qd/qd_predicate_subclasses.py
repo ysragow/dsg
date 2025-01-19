@@ -1130,4 +1130,5 @@ def pred_gen(pred_string, table):
         values.add(value_name[1:-1])
         return Categorical(Operator('IN'), column, values)
     else:
-        raise Exception("Something's wrong")
+
+        raise Exception(f"Something went wrong while trying to parse {pred_string}")
