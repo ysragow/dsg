@@ -507,8 +507,8 @@ class PQD:
         pq_file = ParquetFile(file)
         bounds = q.list_preds()
         for c_name in relevant_columns:
-            bounds.append(self.pred_gen(f"{c_name} >= {pq_file.statistics['min'][c_name]}"))
-            bounds.append(self.pred_gen(f"{c_name} >= {pq_file.statistics['min'][c_name]}"))
+            bounds.append(self.pred_gen(f"{c_name} >= {pq_file.statistics['min'][c_name][0]}"))
+            bounds.append(self.pred_gen(f"{c_name} <= {pq_file.statistics['max'][c_name][0]}"))
         return intersect(bounds)
 
     def score_func_2a(self, split_factor, remainders, pfile1, pfile2):
