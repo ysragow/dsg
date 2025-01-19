@@ -285,6 +285,7 @@ class PQD:
         # Initialize table_dict, table_q_dict, and the index
         self.table_dict = {}  # dict mapping file names to corresponding table objects
         self.table_q_dict = {}  # dict mapping file names to list of query ids in the workload which access it
+        self.table_q_num_dict = {} # dict mapping file names to list of query ids on the workload which would access it in a row group skipping context
         self.total_size = 0
         all_objs = index(Query([], table), root_path, table, verbose=verbose)
         for obj in all_objs:
@@ -292,6 +293,7 @@ class PQD:
             self.index[obj] = []
             self.table_dict[obj] = table_gen(obj)
             self.table_q_dict[obj] = []
+            self.table_q_num_dict[obj] = []
 
             # Don't bother dealing with files that are empty
             if self.table_dict[obj].size != 0:
@@ -307,10 +309,15 @@ class PQD:
             self.query_ids[id] = q
             for obj in objs:
                 if obj not in self.table_q_dict:
-                    print("A contradiction has been found")
-                    print(f"Query: {q}")
-                    print(f"File: {obj}")
+                    print(f"A contradiction has been found!  Query {q} accesses file {obj}, even though an empty query does not.")
                 self.table_q_dict[obj].append(id)
+
+            # Index it in the row group skipping way: without comparative preds or non-numerical columns
+            num_q = Query(filter(lambda x: x.column.numerical & (not x.comparative), q.list_preds()), table)
+            for obj in filter(lambda x: self.intersect(num_q, x, table.list_columns()), all_objs):
+                self.table_q_num_dict[obj].append(id)
+
+            # Increment the id
             id += 1
 
         # Assert that every leaf is queried
@@ -533,12 +540,12 @@ class PQD:
             total_qs += 1
             if new_files > remainders[q]:
                 return 0
-            if q in pfile1.queries:
-                q_obj = pfile1.queries[q]
-            else:
-                q_obj = pfile2.queries[q]
-            total_intersected_1 = sum([self.intersect(q_obj, file, relevant_columns) for file in pfile1.file_list])
-            total_intersected_2 = sum([self.intersect(q_obj, file, relevant_columns) for file in pfile2.file_list])
+            total_intersected_1 = 0
+            for obj in pfile1.file_list:
+                total_intersected_1 += q in self.table_q_num_dict[obj]
+            total_intersected_2 = 0
+            for obj in pfile2.file_list:
+                total_intersected_2 += q in self.table_q_num_dict[obj]
             in_1 = q in pfile1.queries
             in_2 = q in pfile2.queries
             new_match = (total_intersected_1 + total_intersected_2) / (total_files_1 + total_files_2)
