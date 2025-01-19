@@ -302,6 +302,10 @@ class PQD:
         # Index your workload on the tree
         self.indices = {}  # map of query ids to their files
         self.query_ids = {}  # maps query ids to queries
+        num_columns = []
+        for column in table.columns.values():
+            if column.numerical:
+                num_columns.append(column.name)
         id = 0
         for q in workload.queries:
             objs = index(q, root_path, table)
@@ -314,7 +318,7 @@ class PQD:
 
             # Index it in the row group skipping way: without comparative preds or non-numerical columns
             num_q = Query(filter(lambda x: x.column.numerical & (not x.comparative), q.list_preds()), table)
-            for obj in filter(lambda x: self.intersect(num_q, x, table.list_columns()), all_objs):
+            for obj in filter(lambda x: self.intersect(num_q, x, num_columns), all_objs):
                 self.table_q_num_dict[obj].append(id)
 
             # Increment the id
