@@ -250,6 +250,8 @@ class PQD:
         """
 
         # Save relevant stuff
+        if verbose:
+            print("Initializing PQD object...", end='\r')
         self.block_size = block_size
         split_path = root_path.split('/')
         self.name = '.'.join(split_path[-1].split('.')[:-1])
@@ -287,7 +289,7 @@ class PQD:
         self.table_q_dict = {}  # dict mapping file names to list of query ids in the workload which access it
         self.table_q_num_dict = {} # dict mapping file names to list of query ids on the workload which would access it in a row group skipping context
         self.total_size = 0
-        all_objs = index(Query([], table), root_path, table, verbose=verbose)
+        all_objs = index(Query([], table), root_path, table)
         for obj in all_objs:
             self.total_size += ParquetFile(obj).count()
             self.index[obj] = []
@@ -333,6 +335,8 @@ class PQD:
         self.eff_size_dict = {}  # maps file names to their effective sizes (the size mod twice the abs blk size)
         for file in self.files_list:
             self.eff_size_dict[file] = self.table_dict[file].size % (2 * self.abstract_block_size)
+        if verbose:
+            print("Done.                              ")
 
     # General helper functions
     def layout_made(self):
