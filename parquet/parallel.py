@@ -238,7 +238,8 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
     if verbose:
         num_rows = output if scan else output.shape[0]
         end_concat = time()
-        print('Pooled Read with {} processes scanned {} rows in {} seconds'.format(processes, num_rows, end_concat - start_time))
+        total_size = sum([ParquetFile(file).count() for file in files])
+        print(f'Pooled Read on filters {filters} using {processes} processes scanned {num_rows} rows from files of size {total_size} in {end_concat - start_time} seconds')
         if num_rows == 0:
             print(f"WARNING: 0 rows detected on query with filters {filters} scanning files {files}.")
     if timestamps:
