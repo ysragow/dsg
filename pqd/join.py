@@ -190,7 +190,7 @@ class PFile:
         """
         output = self.test_merge(other)
         self.file_list += other.file_list
-        for q, q_obj in other.queries.values():
+        for q, q_obj in other.queries.items():
             if q not in self.queries:
                 self.queries[q] = q_obj
         self.split_factor += other.split_factor
