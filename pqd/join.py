@@ -1,6 +1,6 @@
 from pqd.split import PNode
 from qd.qd_algorithms import index, table_gen
-from qd.qd_predicate_subclasses import intersect, Numerical, Operator
+from qd.qd_predicate_subclasses import intersect, Numerical, Operator, pred_gen
 from qd.qd_query import Query
 from numpy import argsort as np_argsort
 from fastparquet import ParquetFile, write
@@ -130,8 +130,8 @@ class PFile:
         # Initialize the queries (set of all queries that access this group of files),
         # and the relevant columns (dict mapping numeric columns accessed by this group of files to their bounds)
         self.queries = {}
-        self.relevant_columns = {}
-        self.all_preds = ()
+        self.relevant_columns = set()
+        # self.all_preds = ()
 
         self.path = 'None'
         self.indices = {}
@@ -158,18 +158,14 @@ class PFile:
         # self.queries = self.queries.union(q_ids)
         for i in range(len(q_ids)):
             q_id = q_ids[i]
-            p_list = filter(lambda x: x.column.numerical & x.comparative, q_objs[i].list_preds())
+            p_list = filter(lambda x: x.column.numerical & (not x.comparative), q_objs[i].list_preds())
             q_obj = Query(p_list, q_objs[i].table)
             self.queries[q_id] = q_obj
             for p in q_obj.list_preds():
                 # We only care about columns that 1. we haven't seen before 2. are numerical and 3. non-comparative
                 if p.column.numerical & (not p.comparative) & (p.column.name not in self.relevant_columns):
-                    c_name = p.column.name
-                    column = p.column
-                    c_max = max([ParquetFile(f).statistics['max'][c_name][0] for f in self.file_list])
-                    c_min = min([ParquetFile(f).statistics['min'][c_name][0] for f in self.file_list])
-                    self.relevant_columns[c_name] = (Numerical(Operator('>='), column, c_min), Numerical(Operator('<='), column, c_max))
-            self.all_preds = sum(self.relevant_columns.values(), start=())
+                    self.relevant_columns.add(p.column.name)
+            # self.all_preds = sum(self.relevant_columns.values(), start=())
 
     def test_merge(self, other):
         """
@@ -194,8 +190,11 @@ class PFile:
         """
         output = self.test_merge(other)
         self.file_list += other.file_list
-        self.queries = self.queries.union(other.queries)
+        for q, q_obj in other.queries.values():
+            if q not in self.queries:
+                self.queries[q] = q_obj
         self.split_factor += other.split_factor
+        self.relevant_columns = self.relevant_columns.union(other.relevant_columns)
         return output
 
 
@@ -260,6 +259,7 @@ class PQD:
         self.workload = workload
         self.qd_index = lambda query, v=False: index(query, root_path, table, verbose=v)
         self.q_gen = lambda p_list: Query(p_list, table)
+        self.pred_gen = lambda pred: pred_gen(pred, table)
         self.approx_rg_size = approx_rg_size
 
         # For file_gen_3
@@ -464,8 +464,7 @@ class PQD:
         self.make_layout_1(take_top=False)
 
     # Score functions for layout massaging
-    @staticmethod
-    def score_func_1a(split_factor, remainders, pfile1, pfile2):
+    def score_func_1a(self, split_factor, remainders, pfile1, pfile2):
         """
         Calculate the score
         * This one only uses the number of remaining files
@@ -486,8 +485,7 @@ class PQD:
                 return 0
         return score
 
-    @staticmethod
-    def score_func_1b(split_factor, remainders, pfile1, pfile2):
+    def score_func_1b(self, split_factor, remainders, pfile1, pfile2):
         """
         Calculate the score
         * This one only uses the number of remaining files
@@ -505,12 +503,19 @@ class PQD:
             score += remainders[q] - ((remainders[q] - new_files) % split_factor)
         return score
 
-    @staticmethod
-    def score_func_2a(split_factor, remainders, pfile1, pfile2):
+    def intersect(self, q, file, relevant_columns):
+        pq_file = ParquetFile(file)
+        bounds = q.list_preds()
+        for c_name in relevant_columns:
+            bounds.append(self.pred_gen(f"{c_name} >= {pq_file.statistics['min'][c_name]}"))
+            bounds.append(self.pred_gen(f"{c_name} >= {pq_file.statistics['min'][c_name]}"))
+        return intersect(bounds)
+
+    def score_func_2a(self, split_factor, remainders, pfile1, pfile2):
         """
         Calculate the score
         * This one uses the number of remaining files and the bounds
-        ** It blocks any merge where queries that only access one of the pfiles cannot differentiate between the pfiles
+        ** Scores entirely based on how much it would reduce the percentage of files it needs to access in merged files
         ** It also blocks any merge that would result in going over the remainder
         :param split_factor: The split factor
         :param remainders: Negative the number of files accessed by each query, mod the split factor
@@ -519,21 +524,31 @@ class PQD:
         :return: A score of how good merging these pfiles would be.  Higher is better.
         """
         score = 0
+        total_qs = 0
+        total_files_1 = len(pfile1.file_list)
+        total_files_2 = len(pfile2.file_list)
+        relevant_columns = pfile1.relevant_columns.union(pfile2.relevant_columns)
         test_dict = pfile1.test_merge(pfile2)
         for q, new_files in test_dict.items():
-            score += new_files
-            if q not in pfile1.queries:
-                # Then it must be from pfile2, so we need to make sure it won't enter pfile1
-                if intersect(tuple(pfile2.queries[q].list_preds()) + pfile1.all_preds):
-                    print(f"{tuple(pfile2.queries[q].list_preds())} intersects {pfile1.all_preds}")
-                    return 0
-            if q not in pfile2.queries:
-                # Then it must be from pfile1, so we need to make sure it won't enter pfile2
-                if intersect(tuple(pfile1.queries[q].list_preds()) + pfile2.all_preds):
-                    print(f"{tuple(pfile1.queries[q].list_preds())} intersects {pfile2.all_preds}")
-                    return 0
+            total_qs += 1
             if new_files > remainders[q]:
                 return 0
+            if q in pfile1.queries:
+                q_obj = pfile1.queries[q]
+            else:
+                q_obj = pfile2.queries[q]
+            total_intersected_1 = sum([self.intersect(q_obj, file, relevant_columns) for file in pfile1.file_list])
+            total_intersected_2 = sum([self.intersect(q_obj, file, relevant_columns) for file in pfile2.file_list])
+            in_1 = q in pfile1.queries
+            in_2 = q in pfile2.queries
+            new_match = (total_intersected_1 + total_intersected_2) / (total_files_1 + total_files_2)
+            if in_1 & in_2:
+                score += max(total_intersected_1 / total_files_1, total_intersected_2 / total_files_2) - new_match
+            elif in_1:
+                score += (total_intersected_1 / total_files_1) - new_match
+            else:
+                # Must be in pfile2
+                score += (total_intersected_2 / total_files_2) - new_match
         return score
 
     # Layout post-processing functions
