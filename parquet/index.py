@@ -45,9 +45,9 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
             maxes = stats['max']
             for pred in query_obj.list_preds():
                 if (not pred.comparative) and (pred.column.numerical):
-                    if (pred.op.symbol in ('>', '=>', '=')) and (not pred.op(maxes[pred.column.name], pred.num)):
+                    if (pred.op.symbol in ('>', '=>', '=')) and (not pred.op(maxes[pred.column.name][0], pred.num)):
                         empty_files.append(file)
-                    elif (pred.op.symbol in ('<', '<=', '=')) and (not pred.op(mins[pred.column.name], pred.num)):
+                    elif (pred.op.symbol in ('<', '<=', '=')) and (not pred.op(mins[pred.column.name][0], pred.num)):
                         empty_files.append(file)
         total_time = time() - total_time
         if timestamps:
