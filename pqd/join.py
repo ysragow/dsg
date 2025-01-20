@@ -318,7 +318,6 @@ class PQD:
                 num_columns.append(column.name)
         id = 0
         for q in workload.queries:
-            print("Indexing normally...", end="\r")
             objs = index(q, root_path, table)
             self.indices[id] = objs
             self.query_ids[id] = q
@@ -328,16 +327,14 @@ class PQD:
                 self.table_q_dict[obj].append(id)
 
             # Index it in the row group skipping way: without comparative preds or non-numerical columns
-            print("Indexing for rg skipping...", end="\r")
             num_q = Query(filter(lambda x: x.column.numerical & (not x.comparative), q.list_preds()), table)
             for obj in filter(lambda x: self.intersect(num_q, x, num_columns), all_objs):
                 self.table_q_num_dict[obj].append(id)
 
-            # Remove any queries which are not in the table_q_num_dict
-            print("Removing queries that don't actually access objects...", end="\r")
-            for obj in objs:
-                if id not in self.table_q_num_dict[obj]:
-                    self.table_q_dict[obj].remove(id)
+            # # Remove any queries which are not in the table_q_num_dict
+            # for obj in objs:
+            #     if id not in self.table_q_num_dict[obj]:
+            #         self.table_q_dict[obj].remove(id)
 
             # Increment the id
             id += 1
