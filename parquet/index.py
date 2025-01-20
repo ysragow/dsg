@@ -2,8 +2,9 @@ from params import queries, query_objects, name, partitions, layout, table_path,
 from time import time
 from json import load, dump
 from os import listdir
-from qd.qd_algorithms import index as qd_index, table_gen, reset
+from qd.qd_algorithms import index as qd_index, table_gen, reset, pred_gen, intersect
 from pqd.algorithms import index as pqd_index
+from fastparquet import ParquetFile
 from sys import argv
 # from glob import glob
 
@@ -36,9 +37,23 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
             output = qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=verbosity_2)
         elif layout == 'pqd':
             output = pqd_index(query_obj, root_file[:-4] + 'parquet', table)
+        empty_files = []
+        q_gen = q_gen_const(table_path)
+        for file in output:
+            bounds = []
+            pfile = ParquetFile(file)
+            for column in table.columns.values():
+                if column.numerical:
+                    bounds.append(pred_gen(f"{column.name} <= {pfile.statistics['max'][column.name]}"))
+                    bounds.append(pred_gen(f"{column.name} >= {pfile.statistics['min'][column.name]}"))
+            if not intersect(query_obj.list_preds() + bounds):
+                empty_files.append(file)
         total_time = time() - total_time
         if timestamps:
-            print(f"Query {query_obj} found {len(output)} files in {num_partitions} in {total_time} seconds")
+            if len(empty_files) == 0:
+                print(f"Query {query_obj} found {len(output)} files in {num_partitions} in {total_time} seconds.")
+            else:
+                print(f"Query {query_obj} found {len(output)} files in {num_partitions} in {total_time} seconds, but it won't find anything in the following {len(empty_files)} files: {', '.join(empty_files)}.")
         return output
 
     num_partitions = int(num_partitions)
