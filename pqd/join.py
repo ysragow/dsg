@@ -318,6 +318,7 @@ class PQD:
                 num_columns.append(column.name)
         id = 0
         for q in workload.queries:
+            print("Indexing normally...", end="\n")
             objs = index(q, root_path, table)
             self.indices[id] = objs
             self.query_ids[id] = q
@@ -327,9 +328,16 @@ class PQD:
                 self.table_q_dict[obj].append(id)
 
             # Index it in the row group skipping way: without comparative preds or non-numerical columns
+            print("Indexing for rg skipping...", end="\n")
             num_q = Query(filter(lambda x: x.column.numerical & (not x.comparative), q.list_preds()), table)
             for obj in filter(lambda x: self.intersect(num_q, x, num_columns), all_objs):
                 self.table_q_num_dict[obj].append(id)
+
+            # Remove any queries which are not in the table_q_num_dict
+            print("Removing queries that don't actually access objects...", end="\n")
+            for obj in objs:
+                if id not in self.table_q_num_dict[obj]:
+                    self.table_q_dict[obj].remove(id)
 
             # Increment the id
             id += 1
@@ -344,7 +352,7 @@ class PQD:
         for file in self.files_list:
             self.eff_size_dict[file] = self.table_dict[file].size % (2 * self.abstract_block_size)
         if verbose:
-            print("Done.                              ")
+            print("Done.                                                        ")
 
     # General helper functions
     def layout_made(self):

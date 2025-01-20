@@ -39,23 +39,29 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
             assert layout == 'pqd'
             output = pqd_index(query_obj, root_file[:-4] + 'parquet', table)
         empty_files = []
+        non_empty_files = []
         for file in output:
             stats = ParquetFile(file).statistics
             mins = stats['min']
             maxes = stats['max']
             for pred in query_obj.list_preds():
+                empty = False
                 if (not pred.comparative) and (pred.column.numerical):
                     if (pred.op.symbol in ('>', '=>', '=')) and (not pred.op(maxes[pred.column.name][0], pred.num)):
-                        empty_files.append(file)
+                        empty = True
                     elif (pred.op.symbol in ('<', '<=', '=')) and (not pred.op(mins[pred.column.name][0], pred.num)):
-                        empty_files.append(file)
+                        empty = True
+                if empty:
+                    empty_files.append(file)
+                else:
+                    non_empty_files.append(file)
         total_time = time() - total_time
         if timestamps:
             if len(empty_files) == 0:
                 print(f"Query {query_obj} found {len(output)} files in {num_partitions} in {total_time} seconds.")
             else:
                 print(f"Query {query_obj} found {len(output)} files in {num_partitions} in {total_time} seconds, but it won't find anything in the following {len(empty_files)} files: {', '.join(empty_files)}.")
-        return output
+        return non_empty_files
 
     num_partitions = int(num_partitions)
 
