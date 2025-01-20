@@ -35,18 +35,20 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         total_time = time()
         if layout == 'qd':
             output = qd_index(query_obj, root_file[:-4] + 'parquet', table, verbose=verbosity_2)
-        elif layout == 'pqd':
+        else:
+            assert layout == 'pqd'
             output = pqd_index(query_obj, root_file[:-4] + 'parquet', table)
         empty_files = []
         for file in output:
-            bounds = []
-            pfile = ParquetFile(file)
-            for column in table.columns.values():
-                if column.numerical:
-                    bounds.append(pred_gen(f"{column.name} <= {pfile.statistics['max'][column.name][0]}", table))
-                    bounds.append(pred_gen(f"{column.name} >= {pfile.statistics['min'][column.name][0]}",table))
-            if not intersect(query_obj.list_preds() + bounds):
-                empty_files.append(file)
+            stats = ParquetFile(file).statistics
+            mins = stats['min']
+            maxes = stats['max']
+            for pred in query_obj.list_preds():
+                if (not pred.comparative) and (pred.column.numerical):
+                    if (pred.op.symbol in ('>', '=>', '=')) and (not pred.op(maxes[pred.column.name], pred.num)):
+                        empty_files.append(file)
+                    elif (pred.op.symbol in ('<', '<=', '=')) and (not pred.op(mins[pred.column.name], pred.num)):
+                        empty_files.append(file)
         total_time = time() - total_time
         if timestamps:
             if len(empty_files) == 0:
