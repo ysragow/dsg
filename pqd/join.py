@@ -224,7 +224,14 @@ def rg_approx(func):
         if self.approx_rg_size:
             total_size = sum(map(lambda x: x.shape[0], obj_dict.values()))
             temp_rg_size = self.rg_size
-            self.rg_size = int(1 + (temp_rg_size * total_size / self.block_size))
+            min_rg_size = int(1 + (temp_rg_size * total_size / self.block_size))
+            if self.limit_rg_usage:
+                total_obj_size = sum(map(lambda x: ParquetFile(x).count(), obj_dict.keys()))
+                split_factor = int(0.5 + (total_obj_size / total_size))
+                print("Found Split Factor:", split_factor)
+                self.rg_size = max(int(1 + (total_size / split_factor)), min_rg_size)
+            else:
+                self.rg_size = min_rg_size
             func(self, file_path, obj_dict)
             self.rg_size = temp_rg_size
         else:
@@ -235,7 +242,7 @@ def rg_approx(func):
 # The PQD Class
 
 class PQD:
-    def __init__(self, root_path, table, workload, block_size, split_factor, row_group_size=1000000, dp_factor=100, verbose=False, approx_rg_size=False):
+    def __init__(self, root_path, table, workload, block_size, split_factor, row_group_size=1000000, dp_factor=100, verbose=False, approx_rg_size=False, limit_rg_usage=False):
         """
         Initialize a PQD layout
         :param root_path: path to the root file, regardless of whether it exists
@@ -263,6 +270,7 @@ class PQD:
         self.q_gen = lambda p_list: Query(p_list, table)
         self.pred_gen = lambda pred: pred_gen(pred, table)
         self.approx_rg_size = approx_rg_size
+        self.limit_rg_usage = limit_rg_usage
 
         # For file_gen_3
         self.rg_size = row_group_size
