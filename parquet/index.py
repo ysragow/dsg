@@ -43,8 +43,8 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
             pfile = ParquetFile(file)
             for column in table.columns.values():
                 if column.numerical:
-                    bounds.append(pred_gen(f"{column.name} <= {pfile.statistics['max'][column.name]}", table))
-                    bounds.append(pred_gen(f"{column.name} >= {pfile.statistics['min'][column.name]}",table))
+                    bounds.append(pred_gen(f"{column.name} <= {pfile.statistics['max'][column.name][0]}", table))
+                    bounds.append(pred_gen(f"{column.name} >= {pfile.statistics['min'][column.name][0]}",table))
             if not intersect(query_obj.list_preds() + bounds):
                 empty_files.append(file)
         total_time = time() - total_time
