@@ -44,17 +44,17 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
             stats = ParquetFile(file).statistics
             mins = stats['min']
             maxes = stats['max']
+            empty = False
             for pred in query_obj.list_preds():
-                empty = False
                 if (not pred.comparative) and (pred.column.numerical):
                     if (pred.op.symbol in ('>', '=>', '=')) and (not pred.op(maxes[pred.column.name][0], pred.num)):
                         empty = True
                     elif (pred.op.symbol in ('<', '<=', '=')) and (not pred.op(mins[pred.column.name][0], pred.num)):
                         empty = True
-                if empty:
-                    empty_files.append(file)
-                else:
-                    non_empty_files.append(file)
+            if empty:
+                empty_files.append(file)
+            else:
+                non_empty_files.append(file)
         total_time = time() - total_time
         if timestamps:
             print(f"Query {query_obj} found {len(non_empty_files)} files in {num_partitions} in {total_time} seconds.") #, but it won't find anything in the following {len(empty_files)} files: {', '.join(empty_files)}.")
