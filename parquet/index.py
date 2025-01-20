@@ -57,10 +57,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
                     non_empty_files.append(file)
         total_time = time() - total_time
         if timestamps:
-            if len(empty_files) == 0:
-                print(f"Query {query_obj} found {len(output)} files in {num_partitions} in {total_time} seconds.")
-            else:
-                print(f"Query {query_obj} found {len(output)} files in {num_partitions} in {total_time} seconds, but it won't find anything in the following {len(empty_files)} files: {', '.join(empty_files)}.")
+            print(f"Query {query_obj} found {len(non_empty_files)} files in {num_partitions} in {total_time} seconds.") #, but it won't find anything in the following {len(empty_files)} files: {', '.join(empty_files)}.")
         return non_empty_files
 
     num_partitions = int(num_partitions)
