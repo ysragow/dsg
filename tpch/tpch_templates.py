@@ -6,7 +6,7 @@ from numpy import random
 import numpy as np
 
 
-table = table_gen('tpch_data/tpch.parquet')
+table = table_gen('/home/ysragow/dsg/tpch/tpch_data/tpch.parquet')
 
 containers_1 = ["SM", "LG", "MED", "JUMBO", "WRAP"]
 containers_2 = ["CASE", "BOX", "BAG", "JAR", "PKG", "PACK", "CAN", "DRUM"]
@@ -111,4 +111,27 @@ s_4_1 = pred_gen('l_commitdate < l_receiptdate', table)
 t_4 = Template([s_4_1], [v_4_1, v_4_2], f_4, table)
 
 
-workload = Workload(sum([list([t() for _ in range(10)]) for t in [t_1, t_10, t_12, t_3, t_4]], []))
+def f_6():
+    year = random.randint(1993, 1997 + 1)
+    lower_date_str = f"{year}-01-01"
+    lower_date = np.datetime64(lower_date_str)
+    upper_date_str = f"{year + 1}-01-01"
+    upper_date = np.datetime64(upper_date_str)
+    discount = 0.01 * random.randint(2, 9 + 1)
+    quantity = random.randint(24, 25 + 1)
+    return {'l_shipdate >= ?': lower_date,
+            'l_shipdate < ?': upper_date,
+            'l_discount <= ?': discount + 0.01,
+            'l_discount >= ?': discount - 0.01,
+            'l_quantity < ?': quantity}
+v_6_1 = var_pred_gen('l_shipdate >= ?', table)
+v_6_2 = var_pred_gen('l_shipdate < ?', table)
+v_6_3 = var_pred_gen('l_discount <= ?', table)
+v_6_4 = var_pred_gen('l_discount >= ?', table)
+v_6_5 = var_pred_gen('l_quantity < ?', table)
+t_6 = Template([], [v_6_1, v_6_2, v_6_3, v_6_4, v_6_5], f_6, table)
+
+
+
+
+workload = Workload(sum([list([t() for _ in range(100)]) for t in [t_1, t_10, t_12, t_3, t_4]], []))
