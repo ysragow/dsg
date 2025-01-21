@@ -114,7 +114,7 @@ class Numerical(Predicate):
         if self.column.ctype != 'DATE':
             return self.op(field(self.column.name), scalar(self.num))
         else:
-            print(self.num)
+            # print(self.num)
             num_str = str(self.num)
             if len(num_str) == 10:
                 num_str += ' 00:00:00'
