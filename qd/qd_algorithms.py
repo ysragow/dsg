@@ -217,6 +217,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                     best_pred = pred
                     top_score = score
         if top_score > 0:
+            score = rank_fn(subset, table, workload, pred, prev_preds, verbose=True)
             workload_right, workload_left, _ = workload.split(best_pred, prev_preds)
             print(f'Choosing the predicate "{best_pred}".  {len(workload_left.queries)} queries go left, and {len(workload_right.queries)} queries go right.')
             print('Splitting {} into {} and {}...'.format(table.name, table.name + '0', table.name + '1'), end='\r')
@@ -304,7 +305,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         return 0
 
     if min_size == 0:
-        def rank_fn(data, table, workload, predicate, prev_preds, q_blocks=None):
+        def rank_fn(data, table, workload, predicate, prev_preds, q_blocks=None, verbose=False):
             if q_blocks is None:
                 init_rank = pure_workload_rank(predicate, workload, prev_preds)
             else:
@@ -312,7 +313,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
             return init_rank + 1
         return rank_fn
 
-    def rank_fn(data, table, workload, predicate, prev_preds, q_blocks=None):
+    def rank_fn(data, table, workload, predicate, prev_preds, q_blocks=None, verbose=False):
         if q_blocks is None:
             init_rank = pure_workload_rank(predicate, workload, prev_preds)
         else:
@@ -339,7 +340,10 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         if multiply_sizes:
             return len(workload)*len(data) - len(w_right)*len(d_right) - len(w_left)*len(d_left)
         else:
-            # We add 1 here to show it is better than an invalid split
+            # We add 1 here to show that init_rank = 0 is better than an invalid split
+            if verbose:
+                print(f'''The predicate {predicate} scores {init_rank + 1}.
+                      The total size of the sample is {len(data)}, with {len(d_left)} rows going left and {len(d_right)} going right.''')
             return init_rank + 1
 
     return rank_fn
