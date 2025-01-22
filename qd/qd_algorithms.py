@@ -310,6 +310,8 @@ def rank_fn_gen(min_size, multiply_sizes=False):
                 init_rank = pure_workload_rank(predicate, workload, prev_preds)
             else:
                 init_rank = pure_block_rank(predicate, q_blocks)
+            if verbose:
+                print("This rank function does not care about block sizes")
             return init_rank + 1
         return rank_fn
 
