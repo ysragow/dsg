@@ -217,8 +217,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                 preds = all_predicates(subset, root.table, columns=columns, workload=workload)
             else:
                 preds = all_predicates(subset, root.table, columns=columns)
-            best_pred = preds[0]
-            print("Testing preds...", end='\r')
+            print(f"Testing {len(preds)} preds on sample of size {len(subset)}...", end='\r')
             for pred in preds:
                 # if len(str(pred)) > 100:
                 #     print("acting on pred:", str(pred)[:100] + '                                 ', end='\r')
