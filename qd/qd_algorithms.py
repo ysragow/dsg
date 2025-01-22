@@ -217,7 +217,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                     best_pred = pred
                     top_score = score
         if top_score > 0:
-            score = rank_fn(subset, table, workload, pred, prev_preds, verbose=True)
+            score = rank_fn(subset, table, workload, best_pred, prev_preds, verbose=True)
             workload_right, workload_left, _ = workload.split(best_pred, prev_preds)
             print(f'Choosing the predicate "{best_pred}".  {len(workload_left.queries)} queries go left, and {len(workload_right.queries)} queries go right.')
             print('Splitting {} into {} and {}...'.format(table.name, table.name + '0', table.name + '1'), end='\r')
