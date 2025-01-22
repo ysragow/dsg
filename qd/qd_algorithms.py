@@ -336,10 +336,16 @@ def rank_fn_gen(min_size, multiply_sizes=False):
                 else:
                     d_left.append(row)
         if len(d_right)*table.size/len(data) < min_size:
+            if verbose:
+                print(f"Only {len(d_right)} rows out of {len(data)} go right, so this is invalid")
             return 0
         if len(d_left)*table.size/len(data) < min_size:
+            if verbose:
+                print(f"Only {len(d_left)} rows out of {len(data)} go left, so this is invalid")
             return 0
         if multiply_sizes:
+            if verbose:
+                print("Sizes are being multiplied")
             return len(workload)*len(data) - len(w_right)*len(d_right) - len(w_left)*len(d_left)
         else:
             # We add 1 here to show that init_rank = 0 is better than an invalid split
