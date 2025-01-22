@@ -209,9 +209,11 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
         top_score = 0
         if table.size > 2 * block_size:
             if (subset_size_factor is not None) and first_try:
-                subset_size = int(table.size * subset_size_factor)
-                subset_size = (2 * int(subset_size / 2)) + 2
-            subset = subset_gen(table, subset_size)
+                new_subset_size = int(table.size * subset_size_factor)
+                new_subset_size = (2 * int(new_subset_size / 2)) + 2
+                subset = subset_gen(table, new_subset_size)
+            else:
+                subset = subset_gen(table, subset_size)
             print("Generating preds...", end='\r')
             if first_try:
                 preds = all_predicates(subset, root.table, columns=columns, workload=workload)
