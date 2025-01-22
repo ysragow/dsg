@@ -322,6 +322,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
             init_rank = pure_block_rank(predicate, q_blocks)
         d_right = []
         d_left = []
+        neg_pred = predicate.flip()
         if type(data) == list:
             for row in data:
                 if row in predicate:
@@ -330,11 +331,24 @@ def rank_fn_gen(min_size, multiply_sizes=False):
                     d_left.append(row)
         else:
             # the data is a pandas dataframe
-            for row in data.itertuples(index=False):
-                if row in predicate:
-                    d_right.append(row)
-                else:
-                    d_left.append(row)
+            if predicate.comparative:
+                # Any comparative
+                d_right = data[predicate.op(data[predicate.column.name], data[predicate.col2.name])]
+                d_left = data[neg_pred.op(data[neg_pred.column.name], data[neg_pred.col2.name])]
+                # for row in data.itertuples(index=False):
+                #     if row in predicate:
+                #         d_right.append(row)
+                #     else:
+                #         d_left.append(row)
+            elif predicate.column.numerical:
+                # Numerical
+                d_right = data[predicate.op(data[predicate.column.name], predicate.num)]
+                d_left = data[neg_pred.op(data[neg_pred.column.name], neg_pred.num)]
+            else:
+                # Categorical.  Assume it only has 1 value.
+                value = list(predicate.values)[0]
+                d_right = data[data[predicate.column.name] == value]
+                d_left = data[data[neg_pred.column.name] != value]
         if len(d_right)*table.size/len(data) < min_size:
             if verbose:
                 print(f"Only {len(d_right)} rows out of {len(data)} go right, so this is invalid")
