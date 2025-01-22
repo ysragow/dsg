@@ -208,7 +208,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
     while not valid_splits:
         top_score = 0
         if table.size > 2 * block_size:
-            if subset_size_factor is not None:
+            if (subset_size_factor is not None) and (not first_try):
                 subset_size = int(table.size * subset_size_factor)
                 subset_size = (2 * int(subset_size / 2)) + 2
             subset = subset_gen(table, subset_size)
