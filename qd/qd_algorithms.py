@@ -157,7 +157,7 @@ def all_predicates(data, table, columns=None, workload=None):
     return predicates
 
 
-def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None, prev_preds=None, columns=None, block_size=1000, pred_blocks=None):
+def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None, prev_preds=None, columns=None, block_size=1000, pred_blocks=None, subset_size_factor=None):
     """
     :param table: a table object
     :param workload: a workload object
@@ -208,6 +208,9 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
     while not valid_splits:
         top_score = 0
         if table.size > 2 * block_size:
+            if subset_size_factor is not None:
+                subset_size = int(table.size * subset_size_factor)
+                subset_size = (2 * int(subset_size / 2)) + 2
             subset = subset_gen(table, subset_size)
             print("Generating preds...", end='\r')
             if first_try:
@@ -241,6 +244,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                                   prev_preds=prev_preds + [best_pred],
                                   columns=columns,
                                   block_size=block_size,
+                                  subset_size_factor=subset_size_factor
                                   )
             dict_left = tree_gen(child_left.table,
                                  workload_left,
@@ -251,6 +255,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
                                  prev_preds=prev_preds + [best_pred.flip()],
                                  columns=columns,
                                  block_size=block_size,
+                                 subset_size_factor=subset_size_factor
                                  )
             output.append(str(best_pred))
             output += [dict_right, dict_left]
