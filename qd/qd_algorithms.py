@@ -88,14 +88,20 @@ def subset_gen(table, size):
         return ParquetFile(table.path).to_pandas().sample(size)
 
 
-def all_predicates(data, table, columns=None):
+def all_predicates(data, table, columns=None, workload=None):
     """
     :param data: a list of datapoints
     :param table: the table from where the datapoints came
     :param columns: a list of column names that can be predicated on
+    :param workload: a workload
     :return: a list of all linear predicates separating this datapoints
     """
     predicates = []
+    if workload is not None:
+        for q in workload.queries:
+            for p in q.list_preds():
+                predicates.append(p)
+        return predicates
 
     # If no columns are given to predicate on, then allow for predicating on all columns
     if columns is None:
@@ -198,12 +204,16 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
         print("Done.             ")
     print("Generating subset...", end='\r')
     valid_splits = False
+    first_try = True
     while not valid_splits:
         top_score = 0
         if table.size > 2 * block_size:
             subset = subset_gen(table, subset_size)
             print("Generating preds...", end='\r')
-            preds = all_predicates(subset, root.table, columns=columns)
+            if first_try:
+                preds = all_predicates(subset, root.table, columns=columns, workload=workload)
+            else:
+                preds = all_predicates(subset, root.table, columns=columns)
             best_pred = preds[0]
             print("Testing preds...", end='\r')
             for pred in preds:
@@ -246,6 +256,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
             output += [dict_right, dict_left]
             valid_splits = True
         elif table.size > (2 * block_size):
+            first_try = False
             print("Failed to split {} rows; minimum block size is {}  Trying again.".format(table.size, block_size))
         else:
             valid_splits = True
