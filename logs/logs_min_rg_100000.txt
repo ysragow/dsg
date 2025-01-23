@@ -1,0 +1,102 @@
+Partitions: 1-100000
+Filters [[('l_shipdate', '<=', np.datetime64('1998-08-25'))]] using 10 processes scanned 32059271 out of 32059271 rows (100%) in 9.67019724 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-05'))]] using 10 processes scanned 32220280 out of 32220280 rows (100%) in 9.76186776 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-08-26'))]] using 10 processes scanned 32059271 out of 32059271 rows (100%) in 9.77089285 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-15'))]] using 10 processes scanned 32220280 out of 32220280 rows (100%) in 9.9138751 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-08-27'))]] using 10 processes scanned 32059271 out of 32059271 rows (100%) in 9.77674961 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-04'))]] using 10 processes scanned 32220280 out of 32220280 rows (100%) in 9.7349224 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-08-13'))]] using 10 processes scanned 31903218 out of 31903218 rows (100%) in 9.87412595 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-18'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.97833609 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-02'))]] using 10 processes scanned 32220280 out of 32220280 rows (100%) in 9.7216804 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-01'))]] using 10 processes scanned 32220280 out of 32220280 rows (100%) in 9.77629518 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-05-01')), ('o_orderdate', '<', np.datetime64('1993-08-01'))]] using 10 processes scanned 2002668 out of 2616568 rows (76%) in 0.80683755 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-10-01')), ('o_orderdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 1532064 out of 1532064 rows (100%) in 0.70978403 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-06-01')), ('o_orderdate', '<', np.datetime64('1994-09-01'))]] using 10 processes scanned 1526106 out of 1526106 rows (100%) in 0.71821832 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-01-01')), ('o_orderdate', '<', np.datetime64('1995-04-01'))]] using 10 processes scanned 1641479 out of 1641479 rows (100%) in 0.79675841 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-01-01')), ('o_orderdate', '<', np.datetime64('1995-04-01'))]] using 10 processes scanned 1641479 out of 1641479 rows (100%) in 0.72031569 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-11-01')), ('o_orderdate', '<', np.datetime64('1995-02-01'))]] using 10 processes scanned 1723079 out of 1723079 rows (100%) in 0.71817946 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-01-01')), ('o_orderdate', '<', np.datetime64('1995-04-01'))]] using 10 processes scanned 1641479 out of 1641479 rows (100%) in 0.73276305 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-01-01')), ('o_orderdate', '<', np.datetime64('1995-04-01'))]] using 10 processes scanned 1641479 out of 1641479 rows (100%) in 0.71454834 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-04-01')), ('o_orderdate', '<', np.datetime64('1993-07-01'))]] using 10 processes scanned 1808818 out of 2422718 rows (74%) in 0.82066583 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-07-01')), ('o_orderdate', '<', np.datetime64('1994-10-01'))]] using 10 processes scanned 1395816 out of 1395816 rows (100%) in 0.71065163 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1997-01-01')), ('l_receiptdate', '<', np.datetime64('1998-01-01'))]] using 10 processes scanned 899197 out of 3673956 rows (24%) in 0.52343749 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1997-01-01')), ('l_receiptdate', '<', np.datetime64('1998-01-01'))]] using 10 processes scanned 899197 out of 3673956 rows (24%) in 0.4713571 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1994-01-01')), ('l_receiptdate', '<', np.datetime64('1995-01-01'))]] using 10 processes scanned 1454101 out of 1454101 rows (100%) in 0.67190408 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1996-01-01')), ('l_receiptdate', '<', np.datetime64('1997-01-01'))]] using 10 processes scanned 1196049 out of 3433099 rows (34%) in 0.52861571 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 737140 out of 737140 rows (100%) in 0.47258996 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 737140 out of 737140 rows (100%) in 0.48196148 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1996-01-01')), ('l_receiptdate', '<', np.datetime64('1997-01-01'))]] using 10 processes scanned 1196049 out of 3433099 rows (34%) in 0.55960512 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 737140 out of 737140 rows (100%) in 0.56115674 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 737140 out of 737140 rows (100%) in 0.48769617 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 737140 out of 737140 rows (100%) in 0.47581863 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-28')), ('o_orderdate', '<', np.datetime64('1995-03-28'))]] using 10 processes scanned 987099 out of 987099 rows (100%) in 0.4930787 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-01')), ('o_orderdate', '<', np.datetime64('1995-03-01'))]] using 10 processes scanned 924084 out of 924084 rows (100%) in 0.48091459 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-26')), ('o_orderdate', '<', np.datetime64('1995-03-26'))]] using 10 processes scanned 987099 out of 987099 rows (100%) in 0.50160598 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-15')), ('o_orderdate', '<', np.datetime64('1995-03-15'))]] using 10 processes scanned 967812 out of 967812 rows (100%) in 0.51621651 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-26')), ('o_orderdate', '<', np.datetime64('1995-03-26'))]] using 10 processes scanned 987099 out of 987099 rows (100%) in 0.49514818 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-30')), ('o_orderdate', '<', np.datetime64('1995-03-30'))]] using 10 processes scanned 1191757 out of 1191757 rows (100%) in 0.57235646 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-05')), ('o_orderdate', '<', np.datetime64('1995-03-05'))]] using 10 processes scanned 924084 out of 924084 rows (100%) in 0.48496079 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-13')), ('o_orderdate', '<', np.datetime64('1995-03-13'))]] using 10 processes scanned 967812 out of 967812 rows (100%) in 0.4869852 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-24')), ('o_orderdate', '<', np.datetime64('1995-03-24'))]] using 10 processes scanned 987099 out of 987099 rows (100%) in 0.49303388 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-14')), ('o_orderdate', '<', np.datetime64('1995-03-14'))]] using 10 processes scanned 967812 out of 967812 rows (100%) in 0.53797435 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-05-01')), ('o_orderdate', '<', np.datetime64('1994-08-01'))]] using 10 processes scanned 933451 out of 933451 rows (100%) in 0.55711364 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-06-01')), ('o_orderdate', '<', np.datetime64('1995-09-01'))]] using 10 processes scanned 931892 out of 931892 rows (100%) in 0.4796226 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-10-01')), ('o_orderdate', '<', np.datetime64('1995-01-01'))]] using 10 processes scanned 816492 out of 816492 rows (100%) in 0.45373177 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-04-01')), ('o_orderdate', '<', np.datetime64('1995-07-01'))]] using 10 processes scanned 1013940 out of 1013940 rows (100%) in 0.5084331 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-10-01')), ('o_orderdate', '<', np.datetime64('1995-01-01'))]] using 10 processes scanned 816492 out of 816492 rows (100%) in 0.47653388 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1997-04-01')), ('o_orderdate', '<', np.datetime64('1997-07-01'))]] using 10 processes scanned 1228926 out of 1228926 rows (100%) in 0.5740416 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-06-01')), ('o_orderdate', '<', np.datetime64('1995-09-01'))]] using 10 processes scanned 931892 out of 931892 rows (100%) in 0.49750542 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-04-01')), ('o_orderdate', '<', np.datetime64('1993-07-01'))]] using 10 processes scanned 1198248 out of 1812148 rows (66%) in 0.58353114 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-04-01')), ('o_orderdate', '<', np.datetime64('1993-07-01'))]] using 10 processes scanned 1198248 out of 1812148 rows (66%) in 0.58762311 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-03-01')), ('o_orderdate', '<', np.datetime64('1994-06-01'))]] using 10 processes scanned 883589 out of 883589 rows (100%) in 0.51154851 seconds.
+Partitions: 10-100000
+Filters [[('l_shipdate', '<=', np.datetime64('1998-08-25'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.64842772 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-05'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.65992164 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-08-26'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.59808778 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-15'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.73065519 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-08-27'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.70398879 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-04'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.80626821 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-08-13'))]] using 10 processes scanned 32235354 out of 32235354 rows (100%) in 9.61097645 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-18'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.58018779 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-02'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.73401856 seconds.
+Filters [[('l_shipdate', '<=', np.datetime64('1998-09-01'))]] using 10 processes scanned 32539067 out of 32539067 rows (100%) in 9.82204771 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-05-01')), ('o_orderdate', '<', np.datetime64('1993-08-01'))]] using 10 processes scanned 1863755 out of 2477655 rows (75%) in 0.78380632 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-10-01')), ('o_orderdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 1725908 out of 2052729 rows (84%) in 0.68937993 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-06-01')), ('o_orderdate', '<', np.datetime64('1994-09-01'))]] using 10 processes scanned 2034803 out of 2510482 rows (81%) in 0.84930634 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-01-01')), ('o_orderdate', '<', np.datetime64('1995-04-01'))]] using 10 processes scanned 2292159 out of 2588195 rows (88%) in 0.90289115 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-01-01')), ('o_orderdate', '<', np.datetime64('1995-04-01'))]] using 10 processes scanned 2292159 out of 2588195 rows (88%) in 0.91826248 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-11-01')), ('o_orderdate', '<', np.datetime64('1995-02-01'))]] using 10 processes scanned 2212628 out of 2743034 rows (80%) in 0.88380718 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-01-01')), ('o_orderdate', '<', np.datetime64('1995-04-01'))]] using 10 processes scanned 2292159 out of 2588195 rows (88%) in 0.93055653 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-01-01')), ('o_orderdate', '<', np.datetime64('1995-04-01'))]] using 10 processes scanned 2292159 out of 2588195 rows (88%) in 0.89858484 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-04-01')), ('o_orderdate', '<', np.datetime64('1993-07-01'))]] using 10 processes scanned 1669905 out of 2283805 rows (73%) in 0.6904304 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-07-01')), ('o_orderdate', '<', np.datetime64('1994-10-01'))]] using 10 processes scanned 2090958 out of 2566637 rows (81%) in 0.88702678 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1997-01-01')), ('l_receiptdate', '<', np.datetime64('1998-01-01'))]] using 10 processes scanned 2799245 out of 4913835 rows (56%) in 1.01460886 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1997-01-01')), ('l_receiptdate', '<', np.datetime64('1998-01-01'))]] using 10 processes scanned 2799245 out of 4913835 rows (56%) in 1.08068656 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1994-01-01')), ('l_receiptdate', '<', np.datetime64('1995-01-01'))]] using 10 processes scanned 1927765 out of 1927765 rows (100%) in 0.87553381 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1996-01-01')), ('l_receiptdate', '<', np.datetime64('1997-01-01'))]] using 10 processes scanned 2949623 out of 4911341 rows (60%) in 1.05699443 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 831880 out of 831880 rows (100%) in 0.49376177 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 831880 out of 831880 rows (100%) in 0.52733516 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1996-01-01')), ('l_receiptdate', '<', np.datetime64('1997-01-01'))]] using 10 processes scanned 2949623 out of 4911341 rows (60%) in 1.09962487 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 831880 out of 831880 rows (100%) in 0.51655054 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 831880 out of 831880 rows (100%) in 0.51858782 seconds.
+Filters [[('l_receiptdate', '>=', np.datetime64('1993-01-01')), ('l_receiptdate', '<', np.datetime64('1994-01-01'))]] using 10 processes scanned 831880 out of 831880 rows (100%) in 0.59600019 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-28')), ('o_orderdate', '<', np.datetime64('1995-03-28'))]] using 10 processes scanned 1077968 out of 1077968 rows (100%) in 0.5154252 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-01')), ('o_orderdate', '<', np.datetime64('1995-03-01'))]] using 10 processes scanned 1120904 out of 1120904 rows (100%) in 0.56788086 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-26')), ('o_orderdate', '<', np.datetime64('1995-03-26'))]] using 10 processes scanned 1077968 out of 1077968 rows (100%) in 0.53220844 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-15')), ('o_orderdate', '<', np.datetime64('1995-03-15'))]] using 10 processes scanned 1058681 out of 1058681 rows (100%) in 0.64615368 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-26')), ('o_orderdate', '<', np.datetime64('1995-03-26'))]] using 10 processes scanned 1077968 out of 1077968 rows (100%) in 0.53726077 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-30')), ('o_orderdate', '<', np.datetime64('1995-03-30'))]] using 10 processes scanned 1819845 out of 1819845 rows (100%) in 0.81304836 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-05')), ('o_orderdate', '<', np.datetime64('1995-03-05'))]] using 10 processes scanned 1120904 out of 1120904 rows (100%) in 0.52989411 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-13')), ('o_orderdate', '<', np.datetime64('1995-03-13'))]] using 10 processes scanned 1058681 out of 1058681 rows (100%) in 0.50526285 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-24')), ('o_orderdate', '<', np.datetime64('1995-03-24'))]] using 10 processes scanned 1077968 out of 1077968 rows (100%) in 0.57427263 seconds.
+Filters [[('l_shipdate', '>', np.datetime64('1995-03-14')), ('o_orderdate', '<', np.datetime64('1995-03-14'))]] using 10 processes scanned 1058681 out of 1058681 rows (100%) in 0.53910994 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-05-01')), ('o_orderdate', '<', np.datetime64('1994-08-01'))]] using 10 processes scanned 933451 out of 933451 rows (100%) in 0.46782565 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-06-01')), ('o_orderdate', '<', np.datetime64('1995-09-01'))]] using 10 processes scanned 1602344 out of 1602344 rows (100%) in 0.67308497 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-10-01')), ('o_orderdate', '<', np.datetime64('1995-01-01'))]] using 10 processes scanned 1106292 out of 1221596 rows (90%) in 0.51423764 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-04-01')), ('o_orderdate', '<', np.datetime64('1995-07-01'))]] using 10 processes scanned 1726609 out of 1726609 rows (100%) in 0.71299481 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-10-01')), ('o_orderdate', '<', np.datetime64('1995-01-01'))]] using 10 processes scanned 1106292 out of 1221596 rows (90%) in 0.59088444 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1997-04-01')), ('o_orderdate', '<', np.datetime64('1997-07-01'))]] using 10 processes scanned 1385925 out of 1547972 rows (89%) in 0.61737322 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1995-06-01')), ('o_orderdate', '<', np.datetime64('1995-09-01'))]] using 10 processes scanned 1602344 out of 1602344 rows (100%) in 0.68399524 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-04-01')), ('o_orderdate', '<', np.datetime64('1993-07-01'))]] using 10 processes scanned 1059335 out of 1673235 rows (63%) in 0.56135892 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1993-04-01')), ('o_orderdate', '<', np.datetime64('1993-07-01'))]] using 10 processes scanned 1059335 out of 1673235 rows (63%) in 0.52386856 seconds.
+Filters [[('o_orderdate', '>=', np.datetime64('1994-03-01')), ('o_orderdate', '<', np.datetime64('1994-06-01'))]] using 10 processes scanned 2034887 out of 2246020 rows (90%) in 0.82580018 seconds.
