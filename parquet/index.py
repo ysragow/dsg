@@ -40,7 +40,7 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
             output = pqd_index(query_obj, root_file[:-4] + 'parquet', table)
         total_time = time() - total_time
         if timestamps:
-            print(f"Query {query_obj} found {len(non_empty_files)} files in {num_partitions} in {total_time} seconds.")
+            print(f"Query {query_obj} found {len(output)} files in {num_partitions} in {total_time} seconds.")
         return output
 
         empty_files = []
