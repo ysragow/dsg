@@ -38,6 +38,8 @@ def index(folder, query_bottom, query_top, timestamps=False, query_obj=None):
         else:
             assert layout == 'pqd'
             output = pqd_index(query_obj, root_file[:-4] + 'parquet', table)
+        return output
+
         empty_files = []
         non_empty_files = []
         for file in output:
