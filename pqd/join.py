@@ -722,6 +722,7 @@ class PQD:
                 # Add to effective dframes
                 eff_size = self.table_dict[obj].size % (2 * self.block_size * split_factor)
                 if eff_size == 0:
+                    print(f"The object {obj} has an effective size of 0")
                     continue
                 ind_size = eff_size // split_factor  # size of each chunk
                 cutoff = eff_size % split_factor  # cutoff for when to stop adding 1 to size
