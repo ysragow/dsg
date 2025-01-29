@@ -860,12 +860,68 @@ class PQD:
             # SLP = subset/last pair: a tuple ((objs in a subset), last objs)
             max_score = num_rg * len(all_qs)
 
-            # q_dict = dict([(key, set(self.table_q_dict[key])) for key in self.table_q_dict.keys()])
             q_dict = self.table_q_dict
             rg_size = self.rg_size
+            
+            # Initialize the bounds for every object so we don't have to do this in the for loop
+            # c_maxes = {}
+            # c_mins = {}
+            num_columns = set()
+            obj_bound_dict = {}
+            for obj in objs:
+                table = table_gen(obj)
+                obj_bounds = {}
+                for col in table.columns.values():
+                    if col.numerical:
+                        obj_bounds[col.name] = (col.min, col.max)
+                        num_columns.add(col.name)
 
+                        # Keep track of the mins and maxes so we can set defaults for the queries
+                        # if col.name in c_maxes:
+                        #     c_maxes[col.name] = max(c_maxes[col.name], col.max)
+                        #     c_mins[col.name] = min(c_mins[col.name], col.min)
+                        # else:
+                        #     c_maxes[col.name] = col.max
+                        #     c_mins[col.name] = col.min
+                obj_bound_dict[obj] = obj_bounds
+            # total_bounds = {}
+            # for c in c_maxes.keys():
+            #     total_bounds[c] = (c_mins[c], c_maxes[c])
+            num_columns = list(num_columns)
+
+            # Initialize the bounds for every query
+            q_maxes_dict = {}
+            q_mins_dict = {}
+            for qid in all_qs:
+                q = self.workload.queries[qid]
+                q_maxes = {}
+                q_mins = {}
+                for pred in q.list_preds():
+                    if (not pred.comparative) and (pred.column.numerical):
+                        cname = pred.column.name
+                        op = pred.op.symbol
+                        if op in ("<", "<=", "="):
+                            # This is a maximum
+                            if cname not in q_maxes:
+                                q_maxes[cname] = (pred.value, (op != '<'))
+                            if pred.value < q_maxes[cname]:
+                                q_maxes[cname] = (pred.value, (op != '<'))
+                            if pred.value == q_maxes[cname]:
+                                q_maxes[cname] = (pred.value, (op != '<') & q_maxes[cname][1])
+                        if op in (">", ">=", "="):
+                            # This is a minimum
+                            if cname not in q_mins:
+                                q_mins[cname] = (pred.value, (op != '>'))
+                            if pred.value > q_mins[cname]:
+                                q_mins[cname] = (pred.value, (op != '>'))
+                            if pred.value == q_mins[cname]:
+                                q_mins[cname] = (pred.value, (op != '>') & q_mins[cname][1])
+                q_maxes_dict[qid] = q_maxes
+                q_mins_dict[qid] = q_mins
+                
+            # Define the Ordering class
             class Ordering:
-                def __init__(self, next, prev=None):
+                def __init__(self, next_obj, prev=None):
                     if prev is None:
                         self.ordering = []
                         self.remainder = set(llist_objs)
@@ -874,8 +930,9 @@ class PQD:
                         self.score = 0
                         self.size = 0
                         self.last_rg_queries = set()
+                        self.bounds = None  # Bounds of the current rg
                         return
-                    self.last = next
+                    self.last = next_obj
 
                     # Initialize the ordering and signature
                     self.ordering = prev.ordering.copy()
@@ -887,26 +944,66 @@ class PQD:
                     self.remainder.remove(self.last)
 
                     # Initialize the size
-                    self.size = prev.size + obj_dict[next].shape[0]
+                    self.size = prev.size + obj_dict[next_obj].shape[0]
 
                     # Initialize the score
                     self.score = prev.score
-                    next_qs = q_dict[self.last]
                     self.last_rg_queries = set()
 
-                    # Account for score accrued through new queries in the current row group
+                    # Account for score accrued through new queries in the current row group, and make the new bounds
                     if prev.size % rg_size != 0:
+                        if prev.bounds is None:
+                            self.bounds = obj_bound_dict[next_obj].copy()
+                        else:
+                            self.bounds = {}
+                            for c in num_columns:
+                                self.bounds[c] = (min(prev.bounds[c][0], obj_bound_dict[next_obj][c][0]), max(prev.bounds[c][1], obj_bound_dict[next_obj][c][1]))
                         self.last_rg_queries = prev.last_rg_queries.copy()
-                        for q in next_qs:
+                        for q in all_qs:
                             if q not in self.last_rg_queries:
-                                self.last_rg_queries.add(q)
-                                self.score += 1
+                                # Test if adding this object would cause the query to intersect this
+                                overlaps = True
+                                for c, q_max in q_maxes_dict[q].items():
+                                    new_min = self.bounds[c][0]
+                                    if q_max[0] < new_min:
+                                        overlaps = False
+                                    elif (q_max[0] == new_min) and (not q_max[1]):
+                                        overlaps = False
+                                for c, q_min in q_mins_dict[q].items():
+                                    new_max = self.bounds[c][1]
+                                    if q_min[0] > new_max:
+                                        overlaps = False
+                                    elif (q_min[0] == new_max) and (not q_min[1]):
+                                        overlaps = False
+                                if overlaps:
+                                    self.score += 1
+                                    self.last_rg_queries.add(q)
+                    else:
+                        self.bounds = None
 
                     # Account for score accrued through making new row groups
                     new_rgs = (self.size // rg_size) - (prev.size // rg_size)
                     if new_rgs > 0:
-                        self.score += new_rgs * len(next_qs)
-                        self.last_rg_queries = set(next_qs)
+                        self.bounds = obj_bound_dict[next_obj].copy()
+                        self.last_rg_queries = set()
+                        for q in all_qs:
+                            # Test if adding this object would cause the query to intersect this
+                            overlaps = True
+                            for c, q_max in q_maxes_dict[q].items():
+                                new_min = self.bounds[c][0]
+                                if q_max[0] < new_min:
+                                    overlaps = False
+                                elif (q_max[0] == new_min) and (not q_max[1]):
+                                    overlaps = False
+                            for c, q_min in q_mins_dict[q].items():
+                                new_max = self.bounds[c][1]
+                                if q_min[0] > new_max:
+                                    overlaps = False
+                                elif (q_min[0] == new_max) and (not q_min[1]):
+                                    overlaps = False
+                            if overlaps:
+                                self.score += new_rgs
+                                self.last_rg_queries.add(q)
 
             old_slps = [Ordering(None, None)]
 
