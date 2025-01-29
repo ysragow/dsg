@@ -707,13 +707,13 @@ class PQD:
                 df_index = 0  # Keep track of our index in the dataframe
 
                 # Account for overflow
-                for _ in range(self.table_dict[obj].size // (2 * self.abstract_block_size)):
-                    for i in range(self.split_factor):
+                for _ in range(self.table_dict[obj].size // (2 * self.block_size * split_factor)):
+                    for i in range(split_factor):
                         file_chunk = df[df_index:df_index + (2 * self.block_size)]
                         chunk_file_name = file_template.format(i, file_num)
                         if verbose:
                             n_rows = file_chunk.shape[0]
-                            print(f"Making file {chunk_file_name} from file {obj} with {n_rows} rows and {-(-n_rows//self.rg_size)} row groups.")
+                            print(f"Making overflow file {chunk_file_name} from file {obj} with {n_rows} rows and {-(-n_rows//self.rg_size)} row groups.")
                         make_alg(chunk_file_name, {obj: file_chunk})
                         gen_size += ParquetFile(chunk_file_name).count()
                         df_index += 2 * self.block_size
@@ -824,6 +824,7 @@ class PQD:
         """
 
         objs = list(obj_dict.keys())
+
         llist_objs = LList(objs)
         total_size = 0
         min_obj_size = 0
