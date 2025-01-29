@@ -224,7 +224,7 @@ def rg_approx(func):
         if self.approx_rg_size:
             total_size = sum(map(lambda x: x.shape[0], obj_dict.values()))
             temp_rg_size = self.rg_size
-            min_rg_size = int(1 + (temp_rg_size * total_size / self.block_size))
+            min_rg_size = int(-(-(temp_rg_size * total_size) / self.block_size))
             if self.limit_rg_usage:
                 total_obj_size = sum(map(lambda x: ParquetFile(x).count(), obj_dict.keys()))
                 split_factor = int(0.5 + (total_obj_size / total_size))
