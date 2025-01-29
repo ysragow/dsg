@@ -295,19 +295,17 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         :return: a ranking of the pred; higher is BETTER
         """
         neg_pred = pred.flip()
-        right_valid = False
-        left_valid = False
-        both_count = 0
+        not_right_count = 0
+        not_left_count = 0
         for block in q_blocks:
             right_test = block.test(pred)
             left_test = block.test(neg_pred)
-            right_valid |= right_test
-            left_valid |= left_test
-            if right_test and left_test:
-                both_count += 1
-        if right_valid and left_valid:
-            return len(q_blocks) - both_count
-        return 0
+            if not right_test:
+                not_right_count += 1
+            if not left_test:
+                not_left_count += 1
+        return not_right_count, not_left_count
+        
 
     def pure_workload_rank(pred, workload, prev_preds):
         """
@@ -318,9 +316,8 @@ def rank_fn_gen(min_size, multiply_sizes=False):
         :return: a ranking of the predicate; higher is BETTER
         """
         w_right, w_left, w_both = workload.split(pred, prev_preds)
-        if (len(w_right) > 0) and (len(w_left) > 0):
-            return len(workload.queries) - len(w_both)
-        return 0
+        return len(workload) - len(w_right), len(workload) - len(w_left)
+        
 
     if min_size == 0:
         def rank_fn(data, table, workload, predicate, prev_preds, q_blocks=None, verbose=False):
@@ -338,6 +335,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
             init_rank = pure_workload_rank(predicate, workload, prev_preds)
         else:
             init_rank = pure_block_rank(predicate, q_blocks)
+        not_right, not_left = init_rank
         d_right = []
         d_left = []
         neg_pred = predicate.flip()
@@ -384,7 +382,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
             if verbose:
                 print(f'''The predicate {predicate} scores {init_rank + 1}.
                       The total size of the sample is {len(data)}, with {len(d_left)} rows going left and {len(d_right)} going right.''')
-            return init_rank + 1
+            return (len(d_left) * not_left) + (len(d_right) * not_right) 1
 
     return rank_fn
 
