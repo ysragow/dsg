@@ -904,17 +904,17 @@ class PQD:
                             # This is a maximum
                             if cname not in q_maxes:
                                 q_maxes[cname] = (pred.value, (op != '<'))
-                            if pred.value < q_maxes[cname]:
+                            if pred.value < q_maxes[cname][0]:
                                 q_maxes[cname] = (pred.value, (op != '<'))
-                            if pred.value == q_maxes[cname]:
+                            if pred.value == q_maxes[cname][0]:
                                 q_maxes[cname] = (pred.value, (op != '<') & q_maxes[cname][1])
                         if op in (">", ">=", "="):
                             # This is a minimum
                             if cname not in q_mins:
                                 q_mins[cname] = (pred.value, (op != '>'))
-                            if pred.value > q_mins[cname]:
+                            if pred.value > q_mins[cname][0]:
                                 q_mins[cname] = (pred.value, (op != '>'))
-                            if pred.value == q_mins[cname]:
+                            if pred.value == q_mins[cname][0]:
                                 q_mins[cname] = (pred.value, (op != '>') & q_mins[cname][1])
                 q_maxes_dict[qid] = q_maxes
                 q_mins_dict[qid] = q_mins
