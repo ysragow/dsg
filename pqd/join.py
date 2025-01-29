@@ -229,7 +229,7 @@ def rg_approx(func):
                 total_obj_size = sum(map(lambda x: ParquetFile(x).count(), obj_dict.keys()))
                 split_factor = int(0.5 + (total_obj_size / total_size))
                 print("Found Split Factor:", split_factor)
-                self.rg_size = max(int(1 + (total_size / split_factor)), min_rg_size)
+                self.rg_size = max(int(-(-total_size // split_factor)), min_rg_size)
             else:
                 self.rg_size = min_rg_size
             func(self, file_path, obj_dict)
