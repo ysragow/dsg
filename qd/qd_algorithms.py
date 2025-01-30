@@ -379,10 +379,11 @@ def rank_fn_gen(min_size, multiply_sizes=False):
             return len(workload)*len(data) - len(w_right)*len(d_right) - len(w_left)*len(d_left)
         else:
             # We add 1 here to show that init_rank = 0 is better than an invalid split
+            score = (len(d_left) * not_left) + (len(d_right) * not_right) + 1
             if verbose:
-                print(f'''The predicate {predicate} scores {init_rank + 1}.
+                print(f'''The predicate {predicate} scores {score}.
                       The total size of the sample is {len(data)}, with {len(d_left)} rows going left and {len(d_right)} going right.''')
-            return (len(d_left) * not_left) + (len(d_right) * not_right) + 1
+            return score
 
     return rank_fn
 
