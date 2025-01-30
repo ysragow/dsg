@@ -382,7 +382,7 @@ def rank_fn_gen(min_size, multiply_sizes=False):
             if verbose:
                 print(f'''The predicate {predicate} scores {init_rank + 1}.
                       The total size of the sample is {len(data)}, with {len(d_left)} rows going left and {len(d_right)} going right.''')
-            return (len(d_left) * not_left) + (len(d_right) * not_right) 1
+            return (len(d_left) * not_left) + (len(d_right) * not_right) + 1
 
     return rank_fn
 
