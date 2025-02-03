@@ -1303,7 +1303,6 @@ class PQD:
         """
         state = 0
         size = None
-        last_obj = None
         other_objs = []
         obj_1 = None
         for obj_name, obj in obj_dict.items():
@@ -1318,6 +1317,7 @@ class PQD:
                 if obj.shape[0] == obj_1.shape[0]:
                     other_objs.append(obj)
                     other_objs.append(obj_1)
+                    obj_1 = None
                     size = obj.shape[0]
                     state = 2
                 else:
@@ -1329,14 +1329,14 @@ class PQD:
                         smaller = obj
                     size = bigger.shape[0]
                     other_objs.append(bigger)
-                    last_obj = smaller
+                    obj_1 = smaller
                     state = 3
             elif state == 2:
                 # We have only seen objects of the same size
                 if obj.shape[0] == size:
                     other_objs.append(obj)
                 else:
-                    last_obj = obj
+                    obj_1 = obj
                     state = 3
             elif state == 3:
                 # We have seen one object of a different size
@@ -1345,7 +1345,7 @@ class PQD:
                     raise ValueError(f"The following invalid object set was attempted to be written here: {error_message}")
                 other_objs.append(obj)
 
-        if last_obj is not None:
-            other_objs.append(last_obj)
+        if obj_1 is not None:
+            other_objs.append(obj_1)
         print(f"Ordered by file_gen_4.  Row group size is {size}")
         pq.write_table(Table.from_pandas(concat(other_objs).reset_index(drop=True)), file_path, row_group_size=size)
