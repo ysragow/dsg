@@ -1308,7 +1308,7 @@ class PQD:
         obj_2 = None
         for obj_name, obj in obj_dict.items():
             if obj.shape[0] > 0:
-                self.index[obj].append(file_path)
+                self.index[obj_name].append(file_path)
             if state == 0:
                 # We have just started
                 obj_1 = obj
