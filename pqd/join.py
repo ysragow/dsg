@@ -1341,7 +1341,7 @@ class PQD:
                 # We have seen one object of a different size
                 if obj.shape[0] != size:
                     error_message = '{' + ', '.join([f'{c} ({obj_dict[c].shape[0]} rows)' for c in obj_dict.keys()]) + '}'
-                    raise ValueError(f"The following invalid object set was attempted to be written here: {error_message}"
+                    raise ValueError(f"The following invalid object set was attempted to be written here: {error_message}")
 
         other_objs.append(last_obj)
         print(f"Ordered by file_gen_4.  Row group size is {size}")
