@@ -1306,7 +1306,6 @@ class PQD:
         last_obj = None
         other_objs = []
         obj_1 = None
-        obj_2 = None
         for obj_name, obj in obj_dict.items():
             if obj.shape[0] > 0:
                 self.index[obj_name].append(file_path)
@@ -1344,6 +1343,7 @@ class PQD:
                 if obj.shape[0] != size:
                     error_message = '{' + ', '.join([f'{c} ({obj_dict[c].shape[0]} rows)' for c in obj_dict.keys()]) + '}'
                     raise ValueError(f"The following invalid object set was attempted to be written here: {error_message}")
+                other_objs.append(obj)
 
         if last_obj is not None:
             other_objs.append(last_obj)
