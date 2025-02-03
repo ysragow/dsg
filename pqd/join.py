@@ -816,8 +816,8 @@ class PQD:
                         file_index = obj_num
                     else:
                         file_index = (i + obj_num + 1) % split_factor
-                    eff_dframes[file_index][obj] = df[df_index: min(df_index + split_size, size)]
-                    df_index += split_size
+                    eff_dframes[file_index][obj] = df[df_index: min(df_index + chunk_size, size)]
+                    df_index += chunk_size
 
             # Create each file
             for i in range(split_factor):
