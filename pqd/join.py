@@ -1311,6 +1311,7 @@ class PQD:
             if state == 0:
                 # We have just started
                 obj_1 = obj
+                size = obj_1.shape[0]
                 state = 1
             elif state == 1:
                 # We have seen one object
