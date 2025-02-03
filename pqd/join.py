@@ -1319,6 +1319,7 @@ class PQD:
                 if obj.shape[0] == obj_1.shape[0]:
                     other_objs.append(obj)
                     other_objs.append(obj_1)
+                    size = obj.shape[0]
                     state = 2
                 else:
                     if obj.shape[0] > obj_1.shape[0]:
@@ -1344,6 +1345,7 @@ class PQD:
                     error_message = '{' + ', '.join([f'{c} ({obj_dict[c].shape[0]} rows)' for c in obj_dict.keys()]) + '}'
                     raise ValueError(f"The following invalid object set was attempted to be written here: {error_message}")
 
-        other_objs.append(last_obj)
+        if last_obj is not None:
+            other_objs.append(last_obj)
         print(f"Ordered by file_gen_4.  Row group size is {size}")
         pq.write_table(Table.from_pandas(concat(other_objs).reset_index(drop=True)), file_path, row_group_size=size)
