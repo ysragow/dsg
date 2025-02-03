@@ -817,7 +817,7 @@ class PQD:
                     else:
                         file_index = (i + obj_num + 1) % split_factor
                     eff_dframes[file_index][obj] = df[df_index: min(df_index + chunk_size, size)]
-                    print(f"Making a file with {eff_dframes[file_index][obj]} rows from object {obj}")
+                    print(f"Making a file with {eff_dframes[file_index][obj].shape[0]} rows from object {obj}")
                     df_index += chunk_size
 
             # Create each file
