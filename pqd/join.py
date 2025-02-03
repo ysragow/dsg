@@ -756,6 +756,94 @@ class PQD:
         with open(folder_path + "/index.json", "w") as file:
             dump(self.index, file)
 
+    def make_files_2(self, folder_path, verbose=False):
+        """
+        Generate files based on the current self.layout and make_alg.  This one chooses the chunk size very carefully and only uses file_gen_4
+        :param folder_path: Folder for storing things in
+        :param verbose: how much to print
+        """
+
+        # Make the folders, if they don't exist
+        file_template = folder_path + "/" + "{}/" + self.name + "{}.parquet"
+        folder_template = folder_path + "/" + "{}"
+        for i in range(max(self.split_factors)):
+            folder = folder_template.format(i)
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+
+        total_og_size = 0  # size of input
+        total_gen_size = 0  # size of output
+
+        # Begin the for loop.  Load objects into memory.
+        file_num = 0
+        for pfile in self.layout:
+            assert pfile.split_factor == len(pfile.file_list)
+            split_factor = pfile.split_factor
+            og_size = 0
+            gen_size = 0
+            # Initialize variables
+            eff_dframes = {}  # Maps n to a dict mapping obj to the slice of the dframes[obj] going into f_path/n/pfile
+            for i in range(split_factor):
+                eff_dframes[i] = {}
+
+            # Get the chunk size
+            chunk_size = 0
+            for obj in pfile.file_list:
+                potential_c_size = -(-ParquetFile(obj).count() // split_factor)
+                chunk_size = max(chunk_size, potential_c_size)
+
+            # Loop through all the objects in the pfile
+            for obj_num in range(split_factor):
+                obj = pfile.file_list[obj_num]
+                if verbose:
+                    print(f"Loading dataframe for file {obj}...", end='\r')
+
+                df = ParquetFile(obj).to_pandas()
+                if verbose:
+                    print(f"Loaded dataframe for file {obj} with {df.shape[0]} rows")
+                df_index = 0  # Keep track of our index in the dataframe
+
+                # Add to effective dframes
+                size = df.shape[0]
+                og_size += size
+                if size == 0:
+                    print(f"The object {obj} has a size of 0")
+                    continue
+
+                for i in range(-(-size // chunk_size)):
+                    # Check for whether you are adding the last one or not
+                    if (chunk_size * i) >= size:
+                        file_index = obj_num
+                    else:
+                        file_index = (i + obj_num + 1) % split_factor
+                    eff_dframes[file_index][obj] = df[df_index: min(df_index + split_size, size)]
+                    df_index += split_size
+
+            # Create each file
+            for i in range(split_factor):
+                is_nonzero = False
+                for dframe in eff_dframes[i].values():
+                    is_nonzero = (dframe.shape[0] != 0)
+                    if is_nonzero:
+                        break
+                if verbose and is_nonzero:
+                    p_temp = "{} rows from file {}"
+                    p_str = ", ".join([p_temp.format(eff_dframes[i][obj3].shape[0], obj3) for obj3 in eff_dframes[i].keys()])
+                    print(f"Making file {file_template.format(i, file_num)} with {p_str}")
+                if is_nonzero:
+                    self.file_gen_4(file_template.format(i, file_num), eff_dframes[i])
+                    gen_size += ParquetFile(file_template.format(i, file_num)).count()
+            file_num += 1
+            assert gen_size == og_size, f"{gen_size} rows were generated from an input of {og_size}"
+            total_og_size += og_size
+            total_gen_size += gen_size
+
+        assert total_gen_size == total_og_size
+        assert total_gen_size == self.total_size
+        # Save the index
+        with open(folder_path + "/index.json", "w") as file:
+            dump(self.index, file)
+
     # file_gen functions for make_files
     @remove_index
     def file_gen_1(self, file_path, obj_dict):
@@ -1203,3 +1291,57 @@ class PQD:
         else:
             # The number of files to arrange is significantly larger than the number of row groups
             self.file_gen_3b(file_path, obj_dict)
+
+    @remove_index
+    def file_gen_4(self, file_path, obj_dict):
+        """
+        Generate a file
+        **This one can only be used if all chunk sizes are identical, except for one which is smaller than the rest
+        :param file_path: Folder for storing things in
+        :param obj_dict: A dict mapping file names to pandas dataframes containing chunks of those files
+        """
+        state = 0
+        size = None
+        last_obj = None
+        other_objs = []
+        obj_1 = None
+        obj_2 = None
+        for obj_name, obj in obj_dict.items():
+            if obj_dict[obj].shape[0] > 0:
+                self.index[obj].append(file_path)
+            if state == 0:
+                # We have just started
+                obj_1 = obj
+                state = 1
+            elif state == 1:
+                # We have seen one object
+                if obj.shape[0] == obj_1.shape[0]:
+                    other_objs.append(obj)
+                    other_objs.append(obj_1)
+                    state = 2
+                else:
+                    if obj.shape[0] > obj_1.shape[0]:
+                        bigger = obj
+                        smaller = obj_1
+                    else:
+                        bigger = obj_1
+                        smaller = obj
+                    size = bigger.shape[0]
+                    other_objs.append(bigger)
+                    last_obj = smaller
+                    state = 3
+            elif state == 2:
+                # We have only seen objects of the same size
+                if obj.shape[0] == size:
+                    other_objs.append(obj)
+                else:
+                    last_obj = obj
+                    state = 3
+            elif state == 3:
+                # We have seen one object of a different size
+                if obj.shape[0] != size:
+                    raise ValueError(f"The following invalid object set was attempted to be written here: {'{' + ', '.join([f'{c} ({obj_dict[c].shape[0]} rows)' for c in obj_dict.keys()]) + '}'}"
+
+        other_objs.append(last_obj)
+        print(f"Ordered by file_gen_4.  Row group size is {size}")
+        pq.write_table(Table.from_pandas(concat(other_objs).reset_index(drop=True)), file_path, row_group_size=size)
