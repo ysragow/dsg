@@ -812,7 +812,7 @@ class PQD:
 
                 for i in range(-(-size // chunk_size)):
                     # Check for whether you are adding the last one or not
-                    if (chunk_size * i) >= size:
+                    if (chunk_size * (i + 1)) >= size:
                         file_index = obj_num
                     else:
                         file_index = (i + obj_num + 1) % split_factor
