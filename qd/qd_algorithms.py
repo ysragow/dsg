@@ -12,6 +12,7 @@ import pickle
 import csv
 import os
 
+resampling_factor = 20
 
 def dataset_gen(name, num_columns=10, num_points=100000, max_value=9999):
     """
@@ -88,7 +89,7 @@ def subset_gen(table, size):
         return ParquetFile(table.path).to_pandas().sample(size)
 
 
-def all_predicates(data, table, columns=None, workload=None):
+def all_predicates(data, table, columns=None, workload=None, subset_size=None):
     """
     :param data: a list of datapoints
     :param table: the table from where the datapoints came
@@ -114,6 +115,8 @@ def all_predicates(data, table, columns=None, workload=None):
                 predicates.append(Numerical(Operator('<'), column, row[column.num]))
     else:
         # the data is a pandas dataframe
+        if subset_size is None:
+            data = data.sample(sample_size)
         num_columns = []
         date_columns = []
         cat_columns = []
@@ -202,23 +205,26 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
 
 
         print("Done.             ")
-    print("Generating subset...", end='\r')
     valid_splits = False
     first_try = True
+    try_count = 0
     while not valid_splits:
         top_score = 0
         if table.size > 2 * block_size:
+            print("Generating subset...", end='\r')
             if (subset_size_factor is not None) and first_try:
                 new_subset_size = int(table.size * subset_size_factor)
                 new_subset_size = (2 * int(new_subset_size / 2)) + 2
                 subset = subset_gen(table, new_subset_size)
-            else:
+            elif try_count > resampling_factor:
                 subset = subset_gen(table, subset_size)
-            print("Generating preds...", end='\r')
+                try_count = 1
+            print("Generating preds... ", end='\r')
             if first_try:
                 preds = all_predicates(subset, root.table, columns=columns, workload=workload)
             else:
-                preds = all_predicates(subset, root.table, columns=columns)
+                subsubset_size = try_count * int(table.size * subset_size_factor / resampling_factor)
+                preds = all_predicates(subset, root.table, columns=columns, subset_size=subsubset_size)
             print(f"Testing {len(preds)} preds on sample of size {len(subset)}...")
             for pred in preds:
                 # if len(str(pred)) > 100:
@@ -264,6 +270,7 @@ def tree_gen(table, workload, rank_fn=None, subset_size=60, node=None, root=None
             valid_splits = True
         elif table.size > (2 * block_size):
             first_try = False
+            try_count += 1
             print("Failed to split {} rows; minimum block size is {}  Trying again.".format(table.size, block_size))
         else:
             valid_splits = True
