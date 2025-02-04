@@ -12,7 +12,7 @@ import pickle
 import csv
 import os
 
-resampling_factor = 20
+resampling_factor = 200
 
 def dataset_gen(name, num_columns=10, num_points=100000, max_value=9999):
     """
