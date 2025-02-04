@@ -792,15 +792,32 @@ class PQD:
                 potential_c_size = -(-ParquetFile(obj).count() // split_factor)
                 chunk_size = max(chunk_size, potential_c_size)
 
+            # Rank the columns by how frequently they are predicated upon
+            column_count = {}
+            for q in pfile.queries.values():
+                for p in q.list_preds():
+                    cname = p.column.name
+                    column_count[cname] = 1 + column_count.get(cname, 0)
+            column_rank = list(column_count.keys()).sort(reverse=True, key=lambda c: column_count[c])
+
             # Loop through all the objects in the pfile
             for obj_num in range(split_factor):
+
+                # Load and sort the dataframe
                 obj = pfile.file_list[obj_num]
                 if verbose:
                     print(f"Loading dataframe for file {obj}...", end='\r')
 
                 df = ParquetFile(obj).to_pandas()
-                if verbose:
-                    print(f"Loaded dataframe for file {obj} with {df.shape[0]} rows")
+                if len(column_rank) > 0:
+                    if verbose:
+                        print(f"Sorting dataframe for file {obj} with {df.shape[0]} rows on column {column_rank[0]}...", end='\r')
+                    df.sort_values(by=column_rank, inplace=True)
+                    if verbose:
+                        print(f"Sorted dataframe for file {obj} with {df.shape[0]} rows on column {column_rank[0]}.")
+                elif verbose:
+                    print(f"Loaded dataframe for file {obj} with {df.shape[0]} rows.")
+
                 df_index = 0  # Keep track of our index in the dataframe
 
                 # Add to effective dframes
