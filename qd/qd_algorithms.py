@@ -12,7 +12,7 @@ import pickle
 import csv
 import os
 
-resampling_factor = 200
+resampling_factor = 20
 
 def dataset_gen(name, num_columns=10, num_points=100000, max_value=9999):
     """
@@ -115,8 +115,8 @@ def all_predicates(data, table, columns=None, workload=None, subset_size=None):
                 predicates.append(Numerical(Operator('<'), column, row[column.num]))
     else:
         # the data is a pandas dataframe
-        if subset_size is None:
-            data = data.sample(sample_size)
+        if subset_size is not None:
+            data = data.sample(subset_size)
         num_columns = []
         date_columns = []
         cat_columns = []
