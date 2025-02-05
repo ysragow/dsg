@@ -798,7 +798,8 @@ class PQD:
                 for p in q.list_preds():
                     cname = p.column.name
                     column_count[cname] = 1 + column_count.get(cname, 0)
-            column_rank = list(column_count.keys()).sort(reverse=True, key=lambda c: column_count[c])
+            column_rank = list(column_count.keys())
+            column_rank.sort(reverse=True, key=lambda c: column_count[c])
 
             # Loop through all the objects in the pfile
             for obj_num in range(split_factor):
