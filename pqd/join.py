@@ -815,7 +815,7 @@ class PQD:
                         print(f"Sorting dataframe for file {obj} with {df.shape[0]} rows on column {column_rank[0]}...", end='\r')
                     df.sort_values(by=column_rank, inplace=True)
                     if verbose:
-                        print(f"Sorted dataframe for file {obj} with {df.shape[0]} rows on column {column_rank[0]}.")
+                        print(f"Sorted dataframe for file {obj} with {df.shape[0]} rows on column {column_rank[0]}.   ")
                 elif verbose:
                     print(f"Loaded dataframe for file {obj} with {df.shape[0]} rows.")
 
