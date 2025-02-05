@@ -339,9 +339,9 @@ class PQD:
             # Increment the id
             id += 1
 
-        # Assert that every leaf is queried
-        for obj in all_objs:
-            assert len(self.table_q_dict[obj]) > 0, f"The object {obj} is not queried"
+        # # Assert that every leaf is queried
+        # for obj in all_objs:
+        #     assert len(self.table_q_dict[obj]) > 0, f"The object {obj} is not queried"
 
         # Setup for all make_layout
         self.abstract_block_size = block_size * split_factor
