@@ -240,19 +240,14 @@ def pooled_read(filters, files, processes, scan=False, timestamps=False, verbose
         end_concat = time()
         total_size = sum([ParquetFile(file).count() for file in files])
         total_time = end_concat - start_time
+        total_q_time = end_query - start_time
         total_time = (total_time // 0.00000001) / 100000000
+        total_q_time = (total_q_time // 0.00000001) / 100000000
         percentage = (100 * num_rows) // total_size
-        print(f'Filters {filters} using {processes} processes scanned {num_rows} out of {total_size} rows ({percentage}%) in {total_time} seconds.')
+        print(f'Filters {filters} using {processes} processes scanned {num_rows} out of {total_size} rows ({percentage}%) in {total_time} seconds (q_time: {total_q_time}).')
         if num_rows == 0:
             print(f"WARNING: 0 rows detected on query with filters {filters} scanning files {files}.")
     if timestamps:
-        if verbose2:
-            print('\n')
-            print("Pooled Read")
-            print("Processes: ", processes)
-            print("Size: ", output if scan else output.shape)
-            print("Total Time: ", end_concat - start_time)
-            print('\n')
         return end_concat - start_time
     return output
 
