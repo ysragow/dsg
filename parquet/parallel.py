@@ -37,7 +37,7 @@ def read_pq(file, filters=None):
             j += 1
 
         # Now you can read only the row groups that match the filter
-        output_list = []
+        rgs_to_read = []
         for i in range(pf.num_row_groups):
             valid = True
 
@@ -48,10 +48,25 @@ def read_pq(file, filters=None):
                 col_stats[c] = rg_metadata.column(col_indices[cname]).statistics
 
             # Check if each filter matchers
-            for f in filters[0]:
-                pass
+            for col, op, val in filters[0]:
+                if op == '>':
+                    valid = val < col_stats[col].max
+                elif op == '<':
+                    valid = val > col_stats[col].min
+                else:
+                    if op in ('>=', '='):
+                        valid = val <= col_stats[col].max
+                    if op in ('<=', '='):
+                        valid &= val >= col_stats[col].min
+                if not valid:
+                    break
 
-        raise NotImplementedError("Not done yet")
+            # If it matches all the filters, add it in
+            if valid:
+                rgs_to_read.append(i)
+
+        # Read all matching row groups
+        return pf.read_row_groups(rgs_to_read)
     elif (scan_param == 'pure') or (scan_param is True):
         if read == 'pyarrow':
             return parquet.read_table(file)
