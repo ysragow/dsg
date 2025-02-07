@@ -17,8 +17,14 @@ def read_pq(file, filters=None):
     :return: Some kind of a table gained from filtering on the parquet file
     """
     if scan_param == 'rg':
+        # rg scanning with fastparquet
         pf = ParquetFile(file)
         return pf.to_pandas(filters=filters, row_filter=False, columns=pf.columns, index=False)
+    elif scan_param == 'rgp':
+        # rg scanning with pyarrow (so. much. harder.)
+        pf = parquet.ParquetFile(file)
+        print(filters)
+        except NotImplementedError("Not done yet")
     elif (scan_param == 'pure') or (scan_param is True):
         if read == 'pyarrow':
             return parquet.read_table(file)

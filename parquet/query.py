@@ -41,7 +41,7 @@ def run_all(f, files, args, kwargs, drop=False):
             elif type(dnf[2]) == datetime64:
                 if (read == 'fastparquet') or (scan == 'rg'):
                     q.append(dnf)
-                elif read == 'pyarrow':
+                elif (read == 'pyarrow') or (scan == 'rgp'):
                     date_str = str(dnf[2])
                     arg_2 = '%Y-%m-%d'
                     if len(date_str) != 10:
