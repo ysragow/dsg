@@ -27,6 +27,7 @@ def read_pq(file, filters=None):
 
         # Get the relevant columns
         relevant_columns = list(set(f[0] for f in filters[0]))
+        print(relevant_columns)
         col_indices = {}
         j = 0
 
