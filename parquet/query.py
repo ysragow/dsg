@@ -46,7 +46,10 @@ def run_all(f, files, args, kwargs, drop=False):
                     arg_2 = '%Y-%m-%d'
                     if len(date_str) != 10:
                         arg_2 += ' %H:%M:%S'
-                    q.append((dnf[0], dnf[1], scalar(datetime.strptime(date_str, arg_2))))
+                    timestamp = datetime.strptime(date_str, arg_2)
+                    if scan != 'rgp':
+                        timestamp = scalar(timestamp)
+                    q.append((dnf[0], dnf[1], timestamp))
         q = [q]
         query_files = files[j]
         # print(f.__repr__().split(' ')[1] + ' with args ' + str([q, query_files] + args) + 'and kwargs ' + str(kwargs))
