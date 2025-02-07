@@ -24,10 +24,33 @@ def read_pq(file, filters=None):
         # rg scanning with pyarrow (so. much. harder.)
         pf = parquet.ParquetFile(file)
         rgs_to_scan = []
-        print(pf.schema)
+
+        # Get the relevant columns
+        relevant_columns = list(set(f[0] for f in filters[0]))
+        col_indices = {}
+        j = 0
+
+        # Get the indices for the relevant columns
+        for cname in pf.schema.names:
+            if cname in relevant_columns:
+                col_indices[cname] = j
+            j += 1
+
+        # Now you can read only the row groups that match the filter
+        output_list = []
         for i in range(pf.num_row_groups):
             valid = True
+
+            # Get the stats for each relevant column
             rg_metadata = pf.metadata.row_group(i)
+            col_stats = {}
+            for c in relevant_columns:
+                col_stats[c] = rg_metadata.column(col_indices[cname]).statistics
+
+            # Check if each filter matchers
+            for f in filters[0]:
+                pass
+
         raise NotImplementedError("Not done yet")
     elif (scan_param == 'pure') or (scan_param is True):
         if read == 'pyarrow':
