@@ -24,7 +24,7 @@ def read_pq(file, filters=None):
         # rg scanning with pyarrow (so. much. harder.)
         pf = parquet.ParquetFile(file)
         print(filters)
-        except NotImplementedError("Not done yet")
+        raise NotImplementedError("Not done yet")
     elif (scan_param == 'pure') or (scan_param is True):
         if read == 'pyarrow':
             return parquet.read_table(file)
