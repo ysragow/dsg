@@ -27,7 +27,6 @@ def read_pq(file, filters=None):
 
         # Get the relevant columns
         relevant_columns = list(set(f[0] for f in filters[0]))
-        print(relevant_columns)
         col_indices = {}
         j = 0
 
@@ -46,7 +45,7 @@ def read_pq(file, filters=None):
             rg_metadata = pf.metadata.row_group(i)
             col_stats = {}
             for c in relevant_columns:
-                col_stats[c] = rg_metadata.column(col_indices[cname]).statistics
+                col_stats[c] = rg_metadata.column(col_indices[c]).statistics
 
             # Check if each filter matchers
             for col, op, val in filters[0]:
