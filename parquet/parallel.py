@@ -24,7 +24,10 @@ def read_pq(file, filters=None):
         # rg scanning with pyarrow (so. much. harder.)
         pf = parquet.ParquetFile(file)
         rgs_to_scan = []
-        print(pf.metadata)
+        print(pf.schema)
+        for i in range(pf.num_row_groups):
+            valid = True
+            rg_metadata = pf.metadata.row_group(i)
         raise NotImplementedError("Not done yet")
     elif (scan_param == 'pure') or (scan_param is True):
         if read == 'pyarrow':
