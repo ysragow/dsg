@@ -7,6 +7,7 @@ from fastparquet import ParquetFile, write
 from pyarrow import parquet as pq, Table
 from pandas import concat
 from json import dump
+import heapq
 import os
 
 
