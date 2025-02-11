@@ -788,6 +788,8 @@ class PQD:
             # Break if nothing was found
             if best_score <= 0:
                 break
+            if verbose:
+                print("Best pair is {best_pair}, scoring {best_score}")
 
             # Otherwise, continue.  Merge the pair
             i, j = best_pair
@@ -877,6 +879,8 @@ class PQD:
             # Break if nothing was found
             if best_score <= 0:
                 break
+            if verbose:
+                print("Best pair is {best_pair}, scoring {best_score}")
 
             # Otherwise, continue.  Remove the pairs which can no longer be used.
             i, j = best_pair
