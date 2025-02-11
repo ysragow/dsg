@@ -191,7 +191,7 @@ class PairHeap:
         self.pairs = pairs
         self.gid = gid
         for i in range(len(self.pairs)):
-            pair = self.pairs[i].set(i, gid)
+            pair = self.pairs[i].set_index(i, gid)
 
     def __str__(self):
         depth = 0
@@ -233,7 +233,7 @@ class PairHeap:
         self.pairs[parent_i] = self.pairs[i]
         self.pairs[i] = parent
         for index in (i, parent_i):
-            self.pairs[index].set(index, self.gid)
+            self.pairs[index].set_index(index, self.gid)
 
     def _siftup(self, i):
         """
