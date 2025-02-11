@@ -136,6 +136,12 @@ class GroupPair:
         # ONLY EVER CALL THIS
         return self.score > other.score
 
+    def __str__(self):
+        round_score = round(self.score * 100) / 100
+        return str(rounded_score)
+    def __repr__(self):
+        return str(self)
+
     def set_index(self, i, gid):
         """
         Assign the index of this object.  Throw an error if it cannot be set
@@ -185,6 +191,35 @@ class PairHeap:
         self.gid = gid
         for i in range(len(self.pairs)):
             pair = self.pairs[i].set(i, gid)
+
+    def __str__(self):
+        depth = 0
+        length = 1
+        subdivisions = []
+        pairs = [str(pair) for pair in self.pairs]
+        while (length - 1) < len(pairs):
+            depth += 1
+            length *= 2
+            subdivisions.append(pairs[(length // 2) - 1:length-1])
+        if prev_len > 0:
+            subdivisions.append(pairs[(length // 2) - 1:])
+        max_len = 2 + max([len('  '.join(sub)) for sub in subdivisions])
+        if max_len != len('  '.join(subdivisions[-1])):
+            max_len *= 2
+        output = ''
+        for sub in subdivisions:
+            total_size = sum([len(str(obj)) for obj in sub])
+            diff = max_len - total_size
+            spaces_count = -(-diff // len(sub))
+            ends = ' ' * (-(-spaces_count // 2))
+            output += ends
+            output += (' ' * spaces_count).join(sub)
+            output += ends
+            output += '\n'
+        return output
+
+    def __repr__(self):
+        return str(self)
 
     def _parent_swap(self, i):
         """
