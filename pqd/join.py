@@ -115,7 +115,7 @@ def argsort(obj_list, f):
 
 # Classes and Functions for Layout Generation
 class GroupPair:
-    def __init__(gid1, gid2, score):
+    def __init__(self, gid1, gid2, score):
         """
         :param gid1: the group ID of the first PFile object
         :param gid2: the group ID of the second PFile object
@@ -247,6 +247,15 @@ class PairHeap:
         self.pairs[i] = self.pairs[-1]
         self.pairs.pop()
         self._siftdown(i)
+
+
+class TestP:
+    def __init__(self, gid):
+        self.gid = gid
+    def __str__(self):
+        return f'<{self.gid}>'
+    def __repr__(self):
+        return str(self)
 
 
 class PFile:
