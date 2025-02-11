@@ -341,8 +341,7 @@ class PFile:
         :param heap: A heap of GroupPair objects
         """
         assert self.heap is None, "This heap has already been set"
-        heapq.heapify(heap)
-        self.heap = heap
+        self.heap = PairHeap(heap)
 
 
 # Decorators for file_gen functions
@@ -845,8 +844,9 @@ class PQD:
                             file_count += 1
             file_counts.append(file_count)
 
-        # Initialize the remainders
+        # Initialize the remainders and the all_groups object
         remainders = [(-s) % split_factor for s in file_counts]
+        all_groups = self.layout
 
         # Initialize the pairs
         if verbose:
@@ -881,12 +881,14 @@ class PQD:
             # Otherwise, continue.  Remove the pairs which can no longer be used.
             i, j = best_pair
             for index in (i, j):
-                group = self.layout[index]
-                
-
+                group = all_groups[index]
+                for pair in group.heap.pairs:
+                    other = pair.other(index)
+                    all_groups[other].heap.remove(pair)
 
             # Merge the pair
-            best_dict = self.layout[i].merge(self.layout[j])
+            best_dict = all_groups[i].merge(all_groups[j])
+            all_groups[j] = None
 
             # Subtract from the remainders
             for k in range(len(remainders)):
@@ -895,11 +897,31 @@ class PQD:
 
             # Make a new layout
             new_layout = []
-            for k in range(len(self.layout)):
-                if k == j:
+            for group in self.layout:
+                if group.gid == j:
                     continue
-                new_layout.append(self.layout[k])
+                new_layout.append(group)
             self.layout = new_layout
+
+            # Make the new pairs
+            new_pair_list = []
+            for group in self.layout:
+                if group.gid == i:
+                    continue
+                score = score_func(split_factor, remainders, all_groups[i], group)
+                pair = GroupPair(i, j, score)
+                new_pair_list.append(pair)
+                all_groups[group.gid].heap.add(pair)
+            all_groups[i].set_heap(new_pair_list)
+
+            # Get the new best pair
+            best_score = 0
+            best_pair = None
+            for group in self.layout:
+                group_best = group.heap[0]
+                if group_best.score > best_score:
+                    best_pair = (group_best.gid1, group_best.gid2)
+                    best_score = group_best.score
 
         # Define the split factors to be used when making files
         self.split_factors = [p.split_factor for p in self.layout]
