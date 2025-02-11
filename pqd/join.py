@@ -202,8 +202,8 @@ class PairHeap:
             depth += 1
             length *= 2
             subdivisions.append(pairs[(length // 2) - 1:length-1])
-        if length > 1:
-            subdivisions.append(pairs[(length // 2) - 1:])
+        # if length > 1:
+        #     subdivisions.append(pairs[(length // 2) - 1:])
         max_len = 2 + max([len('  '.join(sub)) for sub in subdivisions])
         if max_len != len('  '.join(subdivisions[-1])):
             max_len *= 2
@@ -264,8 +264,8 @@ class PairHeap:
         else:
             max_child = children[1]
         if self.pairs[max_child] > self.pairs[i]:
-            self._parent_swap(child_i)
-            self._siftdown(child_i)
+            self._parent_swap(max_child)
+            self._siftdown(max_child)
 
     def add(self, pair):
         """
