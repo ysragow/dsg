@@ -137,7 +137,7 @@ class GroupPair:
         return self.score > other.score
 
     def __str__(self):
-        round_score = round(self.score * 100) / 100
+        rounded_score = round(self.score * 100) / 100
         return str(rounded_score)
     def __repr__(self):
         return str(self)
