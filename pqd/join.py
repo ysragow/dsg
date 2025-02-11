@@ -113,18 +113,154 @@ def argsort(obj_list, f):
     return list([obj_list[i] for i in np_argsort([f(obj) for obj in obj_list])])
 
 
-# The PFile Class
+# Classes and Functions for Layout Generation
+class GroupPair:
+    def __init__(gid1, gid2, score):
+        """
+        :param gid1: the group ID of the first PFile object
+        :param gid2: the group ID of the second PFile object
+        :param score: the score of this 
+        """
+        self.gid1 = gid1
+        self.gid2 = gid2
+        assert gid1 != gid2, "You can't combine a group with itself"
+        self.score = score
+        self.i1 = None
+        self.i2 = None
+
+    def __lt__(self, other):
+        # Does the opposite of what you would expect so heapify makes a max heap
+        return self.score > other.score
+
+    def __gt__(self, other):
+        # ONLY EVER CALL THIS
+        return self.score > other.score
+
+    def set_index(self, i, gid):
+        """
+        Assign the index of this object.  Throw an error if it cannot be set
+        :param i: index of this object in a PairHeap
+        :param gid: Group ID of the group that the PairHeap belongs to
+        """
+        if gid == self.gid1:
+            self.i1 = i
+        elif gid == self.gid2:
+            self.i2 = i
+        else:
+            raise ValueError(f"The group pair ({self.gid1}, {self.gid2}) cannot be assigned an index for group {gid}.")
+
+    def other(self, gid):
+        """
+        Get the other gid, given one of them
+        :param gid: the first gid
+        """
+        if self.gid1 == gid:
+            return self.gid2
+        elif self.gid2 == gid:
+            return self.gid1
+        raise ValueError(f"The gid {gid} is not in ({self.gid1}, {self.gid2}).")
+
+    def index(self, gid):
+        """
+        Get the index given 
+        :param gid: the first gid
+        """
+        if self.gid1 == gid:
+            return self.i1
+        elif self.gid2 == gid:
+            return self.i2
+        raise ValueError(f"The gid {gid} is not in ({self.gid1}, {self.gid2}).")
+
+
+class PairHeap:
+    def __init__(self, pairs, gid):
+        """
+        A max heap of group pairs
+        The children of node i are 2i+1 and 2i+2, so the parent of a node is (i-1) // 2
+        :param pairs: a list of GroupPair objects
+        :param gid: the group id of the parent group
+        """
+        heapq.heapify(pairs)
+        self.pairs = pairs
+        self.gid = gid
+        for i in range(len(self.pairs)):
+            pair = self.pairs[i].set(i, gid)
+
+    def _parent_swap(self, i):
+        """
+        :param i: the index of the item being swapped with its parent
+        """
+        assert i != 0, "The root cannot be swapped with its parent"
+        parent_i = (i-1) // 2
+        assert self.pairs[i] > self.pairs[parent_i], "These should not be swapped"
+        parent = self.pairs[parent_i]
+        self.pairs[parent_i] = self.pairs[i]
+        self.pairs[i] = parent
+        for index in (i, parent_i):
+            self.pairs[index].set(index, self.gid)
+
+    def _siftup(self, i):
+        """
+        :param i: the index of the item being sifted up
+        """
+        if i == 0:
+            return
+        parent_i = (i-1) // 2
+        if self.pairs[i] > self.pairs[parent_i]:
+            self._parent_swap(i)
+            self._siftup(parent_i)
+
+    def _siftdown(self, i):
+        """
+        :param i: the index of the item being sifted up
+        """
+        if ((2 * i) + 1) >= len(self.pairs):
+            # If no children, then return
+            return
+        if ((2 * i) + 2) == len(self.pairs):
+            child_i = (2 * i) + 1
+            if self.pairs[child_i] > self.pairs[i]:
+                self._parent_swap(child_i)
+            return
+        children = [(2 * i) + 1, (2 * i) + 2]
+        if self.pairs[children[0]] > self.pairs[children[1]]:
+            max_child = children[0]
+        else:
+            max_child = children[1]
+        if self.pairs[max_child] > self.pairs[i]:
+            self._parent_swap(child_i)
+            self._siftdown(child_i)
+
+    def add(self, pair):
+        """
+        :param pair: a pair to be added
+        """
+        i = len(self.pairs)
+        self.pairs.append(pair)
+        self._siftup(i)
+
+    def remove(self, pair):
+        """
+        :param pair: the object to be removed
+        """
+        i = pair.index(self.gid)
+        self.pairs[i] = self.pairs[-1]
+        self.pairs.pop()
+        self._siftdown(i)
+
 
 class PFile:
-    def __init__(self, file_list, size, is_overflow):
+    def __init__(self, file_list, size, is_overflow, gid):
         """
         :param file_list: List of files
         :param size: Number of rows
         :param is_overflow: Whether this is an overflow file
+        :param gid: The group id of this PFile
         """
         self.file_list = file_list
         self.split_factor = 1
         self.size = size
+        self.gid = gid
         self.made = False
 
         # Initialize the queries (set of all queries that access this group of files),
@@ -135,6 +271,7 @@ class PFile:
 
         self.path = 'None'
         self.indices = {}
+        self.heap = None
         for file in file_list:
             self.indices[file] = (0,0)
 
@@ -195,7 +332,17 @@ class PFile:
                 self.queries[q] = q_obj
         self.split_factor += other.split_factor
         self.relevant_columns = self.relevant_columns.union(other.relevant_columns)
+        self.heap = None
         return output
+
+    def set_heap(self, heap):
+        """
+        Set the PairHeap.  Fails if the heap is not None
+        :param heap: A heap of GroupPair objects
+        """
+        assert self.heap is None, "This heap has already been set"
+        heapq.heapify(heap)
+        self.heap = heap
 
 
 # Decorators for file_gen functions
@@ -395,7 +542,8 @@ class PQD:
 
     # Make layout functions
     def make_layout_qd(self):
-        self.layout = [PFile([f], ParquetFile(f).count(), False) for f in self.qd_index(self.q_gen([]))]
+        files = self.qd_index(self.q_gen([]))
+        self.layout = [PFile([files[i]], ParquetFile(f).count(), False, i) for i in range(len(files))]
 
     def make_layout_1(self, take_top=True, split_factor=None):
         """
@@ -479,7 +627,7 @@ class PQD:
                 total_size += self.eff_size_dict[obj]
 
             # Finally, add the current file to the layout
-            new_pfile = PFile(current_file, sum([self.eff_size_dict[obj] for obj in current_file]), False)
+            new_pfile = PFile(current_file, sum([self.eff_size_dict[obj] for obj in current_file]), False, len(layout))
             # file_dict[obj].append(new_pfile)
             layout.append(new_pfile)
 
@@ -644,6 +792,100 @@ class PQD:
 
             # Otherwise, continue.  Merge the pair
             i, j = best_pair
+            best_dict = self.layout[i].merge(self.layout[j])
+
+            # Subtract from the remainders
+            for k in range(len(remainders)):
+                if k in best_dict:
+                    remainders[k] = (remainders[k] - best_dict[k]) % split_factor
+
+            # Make a new layout
+            new_layout = []
+            for k in range(len(self.layout)):
+                if k == j:
+                    continue
+                new_layout.append(self.layout[k])
+            self.layout = new_layout
+
+        # Define the split factors to be used when making files
+        self.split_factors = [p.split_factor for p in self.layout]
+
+    def massage_layout_fast(self, split_factor, score_func, verbose=False):
+        """
+        A greedy algorithm for pairing together objects
+        - Same as massage_layout, but faster
+        Modifies the layout
+        :param split_factor: The number of parallel reads which can be performed simultaneously
+        :param score_func: The function used to calculate the score
+        :param verbose: whether to print things
+        """
+        if not self.layout_made():
+            raise Exception("This function can only be called once the layout is made")
+        index_all = [set(self.qd_index(q)) for q in self.workload.queries]
+        for pfile in self.layout:
+            new_queries = sum([list(self.table_q_dict[obj]) for obj in pfile.file_list], start=[])
+            # print(new_queries)
+            pfile.add_queries(new_queries, [self.workload.queries[q_id] for q_id in new_queries])
+
+        # Make sure everything lines up
+        for pfile in self.layout:
+            for q in pfile.queries:
+                assert len(index_all[q].intersection(pfile.file_list)) > 0, f"Query {self.workload.queries[q]} is listed as being in the pfile containing the files {pfile.file_list}, but it only indexes to {index_all[q]}."
+        file_counts = []
+        for i in range(len(index_all)):
+            file_set = index_all[i]
+            file_count = 0
+            for pfile in self.layout:
+                accessed = False
+                for obj in pfile.file_list:
+                    if obj in file_set:
+                        assert i in pfile.queries, f"Query {self.workload[i]} maps to object {obj}, but is not in the queries assigned to access the pfile containing the files {pfile.file_list}."
+                        if not accessed:
+                            accessed = True
+                            file_count += 1
+            file_counts.append(file_count)
+
+        # Initialize the remainders
+        remainders = [(-s) % split_factor for s in file_counts]
+
+        # Initialize the pairs
+        if verbose:
+            print("Remainders:", remainders)
+        pair_lists = [[] for _ in range(len(self.layout))]
+        best_score = 0
+        best_pair = None
+        for i in range(len(self.layout)):
+            for j in range(i):
+                pfile1 = self.layout[i]
+                pfile2 = self.layout[j]
+
+                # Score the pair, and make the GroupPair
+                score = score_func(split_factor, remainders, pfile1, pfile2)
+                pair = GroupPair(i, j, score)
+                pair_lists[i].append(pair)
+                pair_lists[j].append(pair)
+                if score > best_score:
+                    best_pair = (i, j)
+                    best_score = score
+
+        # Make the heaps
+        for i in range(len(self.layout)):
+            self.layout[i].set_heap(pair_lists[i])
+
+        # Enter the while loop
+        while remainders != [0]*len(index_all):
+            # Break if nothing was found
+            if best_score <= 0:
+                break
+
+            # Otherwise, continue.  Remove the pairs which can no longer be used.
+            i, j = best_pair
+            for index in (i, j):
+                group = self.layout[index]
+                
+
+
+            # Merge the pair
             best_dict = self.layout[i].merge(self.layout[j])
 
             # Subtract from the remainders
