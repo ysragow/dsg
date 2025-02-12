@@ -899,8 +899,8 @@ class PQD:
         all_groups = self.layout
 
         # Initialize the pairs
-        if verbose:
-            print("Remainders:", remainders)
+        # if verbose:
+        #     print("Remainders:", remainders)
         pair_lists = [[] for _ in range(len(self.layout))]
         best_score = 0
         best_pair = None
@@ -928,6 +928,7 @@ class PQD:
             if best_score <= 0:
                 break
             if verbose:
+                print("Remainders:", remainders)
                 print(f"Best pair is {best_pair}, scoring {best_score}")
 
             # Otherwise, continue.  Remove the pairs which can no longer be used.
