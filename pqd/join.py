@@ -386,7 +386,7 @@ class PFile:
         :param heap: A heap of GroupPair objects
         """
         assert self.heap is None, "This heap has already been set"
-        self.heap = PairHeap(heap)
+        self.heap = PairHeap(heap, self.gid)
 
 
 # Decorators for file_gen functions
