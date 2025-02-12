@@ -937,7 +937,6 @@ class PQD:
 
             # Merge the pair
             best_dict = all_groups[i].merge(all_groups[j])
-            all_groups[j] = None
 
             # Subtract from the remainders
             for k in range(len(remainders)):
@@ -951,6 +950,7 @@ class PQD:
                     continue
                 new_layout.append(group)
             self.layout = new_layout
+            all_groups[j] = None
 
             # Make the new pairs
             new_pair_list = []
