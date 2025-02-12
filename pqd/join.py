@@ -273,6 +273,7 @@ class PairHeap:
         """
         i = len(self.pairs)
         self.pairs.append(pair)
+        pair.set_index(i, self.gid)
         self._siftup(i)
 
     def remove(self, pair):
@@ -280,6 +281,7 @@ class PairHeap:
         :param pair: the object to be removed
         """
         i = pair.index(self.gid)
+        assert self.pairs[i] == pair, f"The pair {pair} is mismatched and is not at index {i}"
         self.pairs[i] = self.pairs[-1]
         self.pairs.pop()
         self._siftdown(i)
@@ -834,7 +836,7 @@ class PQD:
             if best_score <= 0:
                 break
             if verbose:
-                print("Best pair is {best_pair}, scoring {best_score}")
+                print(f"Best pair is {best_pair}, scoring {best_score}")
 
             # Otherwise, continue.  Merge the pair
             i, j = best_pair
@@ -925,7 +927,7 @@ class PQD:
             if best_score <= 0:
                 break
             if verbose:
-                print("Best pair is {best_pair}, scoring {best_score}")
+                print(f"Best pair is {best_pair}, scoring {best_score}")
 
             # Otherwise, continue.  Remove the pairs which can no longer be used.
             i, j = best_pair
