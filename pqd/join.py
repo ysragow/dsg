@@ -281,7 +281,7 @@ class PairHeap:
         :param pair: the object to be removed
         """
         i = pair.index(self.gid)
-        assert self.pairs[i] == pair, f"The pair {pair} is mismatched and is not at index {i}"
+        assert self.pairs[i] == pair, f"The pair {pair} is mismatched and is not at index {i} in the following heap:\n{self}"
         self.pairs[i] = self.pairs[-1]
         self.pairs.pop()
         self._siftdown(i)
