@@ -960,7 +960,7 @@ class PQD:
                 if group.gid == i:
                     continue
                 score = score_func(split_factor, remainders, all_groups[i], group)
-                pair = GroupPair(i, j, score)
+                pair = GroupPair(i, group.gid, score)
                 new_pair_list.append(pair)
                 all_groups[group.gid].heap.add(pair)
             all_groups[i].set_heap(new_pair_list)
