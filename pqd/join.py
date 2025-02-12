@@ -188,7 +188,7 @@ class PairHeap:
         :param gid: the group id of the parent group
         """
         heapq.heapify(pairs)
-        self.pairs = pairs
+        self.pairs = [pair for pair in pairs]
         self.gid = gid
         for i in range(len(self.pairs)):
             pair = self.pairs[i].set_index(i, gid)
