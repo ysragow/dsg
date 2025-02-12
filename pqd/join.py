@@ -930,7 +930,7 @@ class PQD:
                 break
             if verbose:
                 print("Remainders:", remainders)
-                print(f"Best pair is {best_pair}, scoring {best_score}")
+                print(f"Best pair is {best_pair.gid1, best_pair.gid2}, scoring {best_score}")
 
             # Otherwise, continue.  Remove the pairs which can no longer be used.
             gid1 = best_pair.gid1
