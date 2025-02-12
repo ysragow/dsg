@@ -187,8 +187,8 @@ class PairHeap:
         :param pairs: a list of GroupPair objects
         :param gid: the group id of the parent group
         """
-        heapq.heapify(pairs)
         self.pairs = [pair for pair in pairs]
+        heapq.heapify(self.pairs)
         self.gid = gid
         for i in range(len(self.pairs)):
             pair = self.pairs[i].set_index(i, gid)
@@ -587,7 +587,7 @@ class PQD:
     # Make layout functions
     def make_layout_qd(self):
         files = self.qd_index(self.q_gen([]))
-        self.layout = [PFile([files[i]], ParquetFile(f).count(), False, i) for i in range(len(files))]
+        self.layout = [PFile([files[i]], ParquetFile(files[i]).count(), False, i) for i in range(len(files))]
 
     def make_layout_1(self, take_top=True, split_factor=None):
         """
