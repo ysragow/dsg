@@ -381,6 +381,7 @@ class PFile:
         self.split_factor += other.split_factor
         self.relevant_columns = self.relevant_columns.union(other.relevant_columns)
         self.heap = None
+        print(f"Merging {self.gid} with {other.gid}")
         return output
 
     def set_heap(self, heap):
@@ -837,7 +838,7 @@ class PQD:
             if best_score <= 0:
                 break
             if verbose:
-                print(f"Best pair is {best_pair}, scoring {best_score}")
+                print(f"Best pair is {tuple(self.layout[k].gid for k in best_pair)}, scoring {best_score}")
 
             # Otherwise, continue.  Merge the pair
             i, j = best_pair
@@ -915,7 +916,7 @@ class PQD:
                 pair_lists[i].append(pair)
                 pair_lists[j].append(pair)
                 if score > best_score:
-                    best_pair = (i, j)
+                    best_pair = pair
                     best_score = score
 
         # Make the heaps
@@ -932,15 +933,16 @@ class PQD:
                 print(f"Best pair is {best_pair}, scoring {best_score}")
 
             # Otherwise, continue.  Remove the pairs which can no longer be used.
-            i, j = best_pair
-            for index in (i, j):
+            gid1 = best_pair.gid1
+            gid2 = best_pair.gid2
+            for index in (gid1, gid2):
                 group = all_groups[index]
                 for pair in group.heap.pairs:
                     other = pair.other(index)
                     all_groups[other].heap.remove(pair)
 
             # Merge the pair
-            best_dict = all_groups[i].merge(all_groups[j])
+            best_dict = all_groups[gid1].merge(all_groups[gid2])
 
             # Subtract from the remainders
             for k in range(len(remainders)):
@@ -950,22 +952,22 @@ class PQD:
             # Make a new layout
             new_layout = []
             for group in self.layout:
-                if group.gid == j:
+                if group.gid == gid2:
                     continue
                 new_layout.append(group)
             self.layout = new_layout
-            all_groups[j] = None
+            all_groups[gid2] = None
 
             # Make the new pairs
             new_pair_list = []
             for group in self.layout:
-                if group.gid == i:
+                if group.gid == gid1:
                     continue
-                score = score_func(split_factor, remainders, all_groups[i], group)
-                pair = GroupPair(i, group.gid, score)
+                score = score_func(split_factor, remainders, all_groups[gid1], group)
+                pair = GroupPair(gid1, group.gid, score)
                 new_pair_list.append(pair)
                 all_groups[group.gid].heap.add(pair)
-            all_groups[i].set_heap(new_pair_list)
+            all_groups[gid1].set_heap(new_pair_list)
 
             # # DEBUG CODE THAT SIGNIFICANTLY SLOWS DOWN
             # for group in self.layout:
@@ -978,7 +980,7 @@ class PQD:
             for group in self.layout:
                 group_best = group.heap.pairs[0]
                 if group_best.score > best_score:
-                    best_pair = (group_best.gid1, group_best.gid2)
+                    best_pair = group_best
                     best_score = group_best.score
 
         # Define the split factors to be used when making files
