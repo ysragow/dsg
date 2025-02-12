@@ -965,6 +965,11 @@ class PQD:
                 all_groups[group.gid].heap.add(pair)
             all_groups[i].set_heap(new_pair_list)
 
+            # DEBUG CODE THAT SIGNIFICANTLY SLOWS DOWN
+            for group in self.layout:
+                for pair in group.heap.pairs:
+                    _ = pair.index(group.gid)
+
             # Get the new best pair
             best_score = 0
             best_pair = None
