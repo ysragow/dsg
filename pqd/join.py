@@ -967,7 +967,7 @@ class PQD:
             best_score = 0
             best_pair = None
             for group in self.layout:
-                group_best = group.heap[0]
+                group_best = group.heap.pairs[0]
                 if group_best.score > best_score:
                     best_pair = (group_best.gid1, group_best.gid2)
                     best_score = group_best.score
