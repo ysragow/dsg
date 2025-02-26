@@ -24,8 +24,6 @@ def load_data(f):
 tpch_sizes = [10000000, 5000000, 2000000, 1000000, 500000, 200000, 100000, 50000, 20000, 10000]
 man_sizes = [10 * size for size in tpch_sizes]
 
-AVG_BLOCKS = True
-
 
 color_map = {
     'Qd-tree': 'tab:orange',
@@ -36,6 +34,7 @@ color_map = {
 }
 
 for folder in ('../qblocks/tpch/3',):
+    AVG_BLOCKS = (folder[:2] == '..') 
     is_tpch = ('tpch' in folder)
     SMALL_SIZE = 14
     plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
@@ -72,7 +71,7 @@ for folder in ('../qblocks/tpch/3',):
         y = y / (1 if AVG_BLOCKS else 10)
         plt.plot(x, y, label=line, color=color_map[line])
     plt.legend(loc='upper left')
-    plt.title("TPC-H Data, TPC-H Query Template 3")
+    plt.title(f"TPC-H Data, TPC-H Query Template {folder.split('/')[-1]}")
     # plt.set_figwidth(10)
     # plt.set_figheight(10)
     plt.savefig(folder + '/plot.png')
