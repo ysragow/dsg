@@ -33,7 +33,7 @@ color_map = {
     'Baseline': 'tab:blue'
 }
 
-for folder in ('../qblocks/tpch/3',):
+for folder in ('tpch/1', 'tpch/3', 'tpch/4', 'tpch/10', 'tpch/12', '../qblocks/tpch/1', '../qblocks/tpch/3', '../qblocks/tpch/4', '../qblocks/tpch/10', '../qblocks/tpch/12'):
     AVG_BLOCKS = (folder[:2] == '..') 
     is_tpch = ('tpch' in folder)
     SMALL_SIZE = 14
@@ -49,12 +49,11 @@ for folder in ('../qblocks/tpch/3',):
         plt.ylabel('Average # of Blocks Accessed')
         plt.yscale('log', base=2)
     else:
-        plt.ylabel('Seconds')
+        plt.ylabel('Average Query Time (Seconds)')
     plt.xlabel('Block Size')
     stuff_to_plot = {'P-Qd 5': [], 'P-Qd 10': [], 'P-Qd 20': [], 'Qd-tree': []}
-    if not AVG_BLOCKS:
-        stuff_to_plot['Baseline']= []
-        base_data = load_data(folder + '/baseline')
+    stuff_to_plot['Baseline']= []
+    base_data = load_data(folder + '/baseline')
     sizes = tpch_sizes if is_tpch else man_sizes
     qd_data = load_data(folder + '/qd')
     for size in sizes:
@@ -62,8 +61,7 @@ for folder in ('../qblocks/tpch/3',):
         ssize = str(size)
         stuff_to_plot['Qd-tree'].append([size, qd_data[ssize]['10']])
         found_size = size if ((size > 5000000) or is_tpch) else (2 * size)
-        if not AVG_BLOCKS:
-            stuff_to_plot['Baseline'].append([found_size, base_data['1-' + ssize]['10']])
+        stuff_to_plot['Baseline'].append([found_size, base_data['1-' + ssize]['10']])
         for factor in (5, 10, 20):
             stuff_to_plot[f'P-Qd {factor}'].append([size, size_data[f'{factor}-{size}']['10']])
     for line in stuff_to_plot.keys():
