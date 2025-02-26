@@ -9,6 +9,11 @@ def loads(s):
         output.append([pred[1:-1].replace("', '", "'\n'").split('\n')[0][1:-1]])
     return output
 
+def index_log_avg(f):
+    with open(f, 'r') as file:
+        s = file.read().split('\n')
+    return sum([int(i.split(' ')[-7]) for i in s]) / len(s)
+
 
 def get_template(s):
     """
